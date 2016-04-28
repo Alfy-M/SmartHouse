@@ -22,6 +22,7 @@ namespace SmartHouse
    
     public partial class Program
     {
+        //double factor;
         
         // This method is run when the mainboard is powered up or reset.   
         void ProgramStarted()
@@ -38,7 +39,7 @@ namespace SmartHouse
                 timer.Tick +=<tab><tab>
                 timer.Start();
             *******************************************************************************************/
-
+            //factor = gasCalibration();
             displayT35.SimpleGraphics.BackgroundColor = GT.Color.Purple;
             GT.Timer timer = new GT.Timer(2000);
             timer.Tick += my_display;
@@ -85,6 +86,21 @@ namespace SmartHouse
             //Debug.Print("Gas: " + gas);
             
 
+        }
+
+        private double gasCalibration()
+        {
+            double sensorValue=0;
+            double sensor_volt;
+            double RS_air;
+            for (int x = 0; x < 100; x++)
+            {
+                sensorValue = sensorValue + gasSense.ReadProportion(); 
+            }
+            sensorValue = sensorValue / 100.0;
+            sensor_volt = sensorValue / 1024 * 5.0;
+            RS_air = (5.0 - sensor_volt) / sensor_volt;
+            return RS_air / 60.0;
         }
        
     }
