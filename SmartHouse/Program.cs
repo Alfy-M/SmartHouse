@@ -23,6 +23,8 @@ namespace SmartHouse
     public partial class Program
     {
         //double factor;
+       
+        Window window;
         
         // This method is run when the mainboard is powered up or reset.   
         void ProgramStarted()
@@ -40,10 +42,14 @@ namespace SmartHouse
                 timer.Start();
             *******************************************************************************************/
             //factor = gasCalibration();
+            gasSense.HeatingElementEnabled = true;
             displayT35.SimpleGraphics.BackgroundColor = GT.Color.Purple;
-            GT.Timer timer = new GT.Timer(2000);
+            GT.Timer timer = new GT.Timer(500);
             timer.Tick += my_display;
            timer.Start();
+           window = displayT35.WPFWindow;
+           window.TouchDown += new Microsoft.SPOT.Input.TouchEventHandler(heating_button);
+
           
             /*
 
@@ -65,22 +71,48 @@ namespace SmartHouse
             Debug.Print("Program Started");
         }
 
+        void heating_button(object sender, Microsoft.SPOT.Input.TouchEventArgs e) {
+            int x;
+            int y;
+            e.GetPosition(window, 0, out x, out y);
+            if (x >= 259 && x < 340 && y >= 199 && y < 240) {
+                if (gasSense.HeatingElementEnabled)
+                {
+                    gasSense.HeatingElementEnabled = false;
+
+                }
+                else {
+                    gasSense.HeatingElementEnabled = true;
+                }
+               
+            }
+        }
+
         void my_display(GT.Timer timer)
         {
             //bmp.Flush();
             TempHumidSI70.Measurement temp = tempHumidSI70.TakeMeasurement();
             //Debug.Print("Temp: " + temp.Temperature.ToString());
             //Debug.Print("Umidity: " + temp.RelativeHumidity.ToString());
-            gasSense.HeatingElementEnabled = true;
+            
+           
             double gas = gasSense.ReadProportion();
             String textt = "Temp: " + temp.Temperature.ToString("F2");
             String textu = "Umidity: " + temp.RelativeHumidity.ToString("F2");
             String textg = "Gas: " + gas.ToString("F2")+" ( " +gasSense.ReadVoltage().ToString("F2")+" )";
             Font mfont = Resources.GetFont(Resources.FontResources.NinaB);
             displayT35.SimpleGraphics.Clear();
-            displayT35.SimpleGraphics.DisplayText(textt, mfont,GT.Color.Blue, 10, 10);
-            displayT35.SimpleGraphics.DisplayText(textu, mfont, GT.Color.Brown, 10, 25);
+            displayT35.SimpleGraphics.DisplayText(textt, mfont,GT.Color.Cyan, 10, 10);
+            displayT35.SimpleGraphics.DisplayText(textu, mfont, GT.Color.Cyan, 10, 25);
             displayT35.SimpleGraphics.DisplayText(textg, mfont, GT.Color.Cyan, 10, 40);
+            displayT35.SimpleGraphics.DisplayRectangle(GT.Color.Black, 1, GT.Color.Blue, 259, 199, 60, 40);
+            if (gasSense.HeatingElementEnabled)
+            {
+                displayT35.SimpleGraphics.DisplayText("ON", mfont, GT.Color.Red, 284, 213);
+            }
+            else {
+                displayT35.SimpleGraphics.DisplayText("OFF", mfont, GT.Color.Red, 284, 213);
+            }
             
             
             //Debug.Print("Gas: " + gas);
