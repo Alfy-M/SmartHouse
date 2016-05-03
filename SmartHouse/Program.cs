@@ -50,9 +50,7 @@ namespace SmartHouse
             //factor = gasCalibration();
 
             //define canvas
-            baseFont = Resources.GetFont(Resources.FontResources.NinaB);
-           canvas = new Canvas();
-           displayT35.WPFWindow.Child = canvas;
+           
            
             displayT35.WPFWindow.TouchDown += new Microsoft.SPOT.Input.TouchEventHandler(screen_click);
             gasSense.HeatingElementEnabled = true;
@@ -62,11 +60,11 @@ namespace SmartHouse
             //var bc = new BrushConverter();
             
             //show_states_page();
-           GT.Timer timer = new GT.Timer(500);
+           GT.Timer timer = new GT.Timer(1000);
           timer.Tick += my_display;
            timer.Start();
 
-           display_state_page();
+          // display_state_page();
           
             /*
 
@@ -107,25 +105,48 @@ namespace SmartHouse
         }
         
         void my_display(GT.Timer timer)
-        {       
+
+
+        {
+
+            baseFont = Resources.GetFont(Resources.FontResources.NinaB);
+            canvas = new Canvas();
+            displayT35.WPFWindow.Child = canvas;
             TempHumidSI70.Measurement temp = tempHumidSI70.TakeMeasurement();
+
             double gas = gasSense.ReadProportion();
             String textt = temp.Temperature.ToString("F2");
             String textu = temp.RelativeHumidity.ToString("F2");
             String textg = gas.ToString("F2")+" (V: " +gasSense.ReadVoltage().ToString("F2")+" )";
             
-            var window = displayT35.WPFWindow;
+            //var window = displayT35.WPFWindow;
             baseFont = Resources.GetFont(Resources.FontResources.NinaB);
             //canvas_dyn = new Canvas();
             //window.Child = canvas_dyn;
 
 
-            String txt = "        ";
-            txtblank = new Text(baseFont, txt);
+
+            txtSerial = new Text(baseFont, "Temp: ");
+            canvas.Children.Add(txtSerial);
+            Canvas.SetTop(txtSerial, 40);
+            Canvas.SetLeft(txtSerial, 60);
+
+            // The following displays as: The serial device is...
+            //
+            txtSerial = new Text(baseFont, "Humidity: ");
+            canvas.Children.Add(txtSerial);
+            Canvas.SetTop(txtSerial, 60);
+            Canvas.SetLeft(txtSerial, 60);
+
+            // The following displays as: The serial...
+            //
+            txtSerial = new Text(baseFont, "Gas: ");
+            canvas.Children.Add(txtSerial);
+            Canvas.SetTop(txtSerial, 80);
+            Canvas.SetLeft(txtSerial, 60);
+
             txtSerial = new Text(baseFont, textt);
             canvas.Children.Add(txtSerial);
-            Canvas.SetTop(txtblank, 40);
-            Canvas.SetLeft(txtblank, 150);
             Canvas.SetTop(txtSerial, 40);
             Canvas.SetLeft(txtSerial, 150);
 
