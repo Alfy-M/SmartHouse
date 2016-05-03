@@ -88,6 +88,7 @@ namespace SmartHouse
                     {
                         gasSense.HeatingElementEnabled = true;
                     }
+                    my_display_main();//TODO: see why not working faster
 
                 }
             }
