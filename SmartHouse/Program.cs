@@ -2,14 +2,17 @@
 using System.Collections;
 using System.Threading;
 using Microsoft.SPOT;
-using Microsoft.SPOT.Hardware;
+/*using Microsoft.SPOT.Hardware;
 using Microsoft.SPOT.Presentation;
 using Microsoft.SPOT.Presentation.Controls;
 using Microsoft.SPOT.Presentation.Media;
 using Microsoft.SPOT.Presentation.Shapes;
-using Microsoft.SPOT.Touch;
+using Microsoft.SPOT.Touch;*/
 using System.IO;
 
+using GHI.Glide;
+using GHI.Glide.Display;
+using GHI.Glide.UI;
 
 
 
@@ -23,41 +26,110 @@ namespace SmartHouse
    
     public partial class Program
     {
-        //double factor;
-        private Text txtSerial;
-        private Rectangle button_gas;//UIElement type
+      /*
+       // private Text txtSerial;
+       // private Rectangle button_gas;//UIElement type
         private Canvas canvas;
       
         private Font baseFont;
-        private Boolean connection;//true=wifi,false=RJ45;
+        private static Boolean connection;//true=wifi,false=RJ45;
         private int window_id;//current menu:0-connection,1-main
         private Boolean connected;
+        */
+        private static Window window;
+        private Boolean connected;
+        private static Boolean connection;//true=wifi,false=RJ45
+        GT.Timer timerMain = new GT.Timer(1000);
+
+  
        
        
         
         // This method is run when the mainboard is powered up or reset.   
         void ProgramStarted()
         {
-           
-           
-            //factor = gasCalibration();
+            window = GlideLoader.LoadWindow(Resources.GetString(Resources.StringResources.StartWindow));//carico window da mostrare
+            GlideTouch.Initialize();
+            Button b_rj = (Button)window.GetChildByName("rjbutton");
+            Button b_wifi = (Button)window.GetChildByName("wifibutton");
 
+            b_rj.TapEvent += ChooseRJ;
+            b_wifi.TapEvent += ChooseWiFi;
 
-            baseFont = Resources.GetFont(Resources.FontResources.NinaB);//font fixed for all
-           //define touch screen click handlar
-            displayT35.WPFWindow.TouchDown += new Microsoft.SPOT.Input.TouchEventHandler(screen_click);
+            Glide.MainWindow = window;
+
             connected = false;
-            window_id = 0;
 
-            GT.Timer timer = new GT.Timer(1000);
-            timer.Tick += my_display_managment;
-            timer.Start();
+           // GT.Timer timer = new GT.Timer(1000);
+           // timer.Tick += my_display_managment;
+           // timer.Start();
 
      
 
             // Use Debug.Print to show messages in Visual Studio's "Output" window during debugging.*/
             Debug.Print("Program Started");
         }
+
+
+        private void ChooseRJ(object sender)
+        {
+            connection = false;
+            gasSense.HeatingElementEnabled = true;
+            timerMain.Tick += DrawMainWindow;
+            timerMain.Start(); 
+        }
+
+     
+        private void ChooseWiFi(object sender)
+        {
+            connection = true;
+            gasSense.HeatingElementEnabled = true;
+            timerMain.Tick += DrawMainWindow;
+            timerMain.Start();  
+           
+        }
+
+        private void DrawMainWindow(GT.Timer timer)
+        {
+            window = GlideLoader.LoadWindow(Resources.GetString(Resources.StringResources.MainWindow));//carico window da mostrare
+            GlideTouch.Initialize();
+            //read sensors
+            TempHumidSI70.Measurement temp = tempHumidSI70.TakeMeasurement();
+            double gas = gasSense.ReadProportion();
+            //fill stuff
+            TextBox temp_box = (TextBox)window.GetChildByName("tempvalue"); 
+            temp_box.Text = temp.Temperature.ToString("F2");
+
+            TextBox umid_box = (TextBox)window.GetChildByName("umidvalue");
+            umid_box.Text = temp.RelativeHumidity.ToString("F2");
+
+            TextBox gas_box = (TextBox)window.GetChildByName("gasvalue");
+            gas_box.Text = gas.ToString("F2");
+
+            TextBlock conn_type = (TextBlock)window.GetChildByName("context");
+            if (connection)
+            {
+                conn_type.Text = "WiFi";
+            }
+            else {
+                conn_type.Text = "RJ45";
+            }
+
+            CheckBox gas_state = (CheckBox)window.GetChildByName("gasonoff");
+            gas_state.Checked = gasSense.HeatingElementEnabled;
+            gas_state.TapEvent += gasonoff;
+
+
+             Glide.MainWindow = window;
+        }
+
+
+        private void gasonoff(object sender)
+        {
+            gasSense.HeatingElementEnabled = !gasSense.HeatingElementEnabled;
+        }
+  
+        /*
 
        void my_display_managment(GT.Timer timer){
            if (connected)
@@ -271,24 +343,7 @@ namespace SmartHouse
         
         }
 
-        
-
-
-        private double gasCalibration()
-        {
-            double sensorValue=0;
-            double sensor_volt;
-            double RS_air;
-            for (int x = 0; x < 100; x++)
-            {
-                sensorValue = sensorValue + gasSense.ReadProportion(); 
-            }
-            sensorValue = sensorValue / 100.0;
-            sensor_volt = sensorValue / 1024 * 5.0;
-            RS_air = (5.0 - sensor_volt) / sensor_volt;
-            return RS_air / 60.0;
-        }
-       
+       */
     }
    
 

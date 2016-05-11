@@ -1,0 +1,7 @@
+<Glide Version="1.0.7">
+  <Window Name="instance115" Width="320" Height="240" BackColor="FFFFFF">
+    <TextBlock Name="instance353" X="76" Y="32" Width="150" Height="32" Alpha="255" Text="Choose connection type" TextAlign="Left" TextVerticalAlign="Top" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
+    <Button Name="rjbutton" X="50" Y="104" Width="80" Height="32" Alpha="255" Text="RJ45" Font="4" FontColor="000000" DisabledFontColor="808080" TintColor="000000" TintAmount="0"/>
+    <Button Name="wifibutton" X="168" Y="104" Width="80" Height="32" Alpha="255" Text="WiFi" Font="4" FontColor="000000" DisabledFontColor="808080" TintColor="000000" TintAmount="0"/>
+  </Window>
+</Glide>

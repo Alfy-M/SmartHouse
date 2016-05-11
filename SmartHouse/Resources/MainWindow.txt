@@ -1,0 +1,13 @@
+<Glide Version="1.0.7">
+  <Window Name="instance115" Width="320" Height="240" BackColor="FFFFFF">
+    <TextBlock Name="temptext" X="2" Y="0" Width="100" Height="32" Alpha="255" Text="Temperature" TextAlign="Left" TextVerticalAlign="Top" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
+    <TextBox Name="tempvalue" X="108" Y="0" Width="80" Height="32" Alpha="255" Text="" TextAlign="Left" Font="4" FontColor="000000"/>
+    <TextBox Name="umidvalue" X="108" Y="50" Width="80" Height="32" Alpha="255" Text="" TextAlign="Left" Font="4" FontColor="000000"/>
+    <TextBox Name="gasvalue" X="108" Y="103" Width="80" Height="32" Alpha="255" Text="" TextAlign="Left" Font="4" FontColor="000000"/>
+    <TextBlock Name="umidtext" X="2" Y="50" Width="100" Height="32" Alpha="255" Text="Umidity" TextAlign="Left" TextVerticalAlign="Top" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
+    <TextBlock Name="gastext" X="2" Y="104" Width="100" Height="32" Alpha="255" Text="Gas" TextAlign="Left" TextVerticalAlign="Top" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
+    <TextBlock Name="instance10044" X="137" Y="185" Width="100" Height="32" Alpha="255" Text="Connection:" TextAlign="Left" TextVerticalAlign="Top" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
+    <TextBlock Name="context" X="225" Y="185" Width="100" Height="32" Alpha="255" Text="TextBlock" TextAlign="Left" TextVerticalAlign="Top" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
+    <CheckBox Name="gasonoff" X="210" Y="102" Width="32" Height="32" Alpha="255" Checked="False"/>
+  </Window>
+</Glide>

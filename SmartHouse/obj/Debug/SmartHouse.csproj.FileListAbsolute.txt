@@ -211,3 +211,9 @@ C:\Users\John\Documents\GitHub\SmartHouse\SmartHouse\obj\Debug\le\SmartHouse.pe
 C:\Users\John\Documents\GitHub\SmartHouse\SmartHouse\obj\Debug\le\SmartHouse.pdbx
 C:\Users\John\Documents\GitHub\SmartHouse\SmartHouse\obj\Debug\SmartHouse.exe
 C:\Users\John\Documents\GitHub\SmartHouse\SmartHouse\obj\Debug\SmartHouse.pdb
+C:\Users\John\Documents\GitHub\SmartHouse\SmartHouse\bin\Debug\LE\GHI.Glide.pe
+C:\Users\John\Documents\GitHub\SmartHouse\SmartHouse\bin\Debug\BE\GHI.Glide.pe
+C:\Users\John\Documents\GitHub\SmartHouse\SmartHouse\bin\Debug\LE\GHI.Glide.pdbx
+C:\Users\John\Documents\GitHub\SmartHouse\SmartHouse\bin\Debug\BE\GHI.Glide.pdbx
+C:\Users\John\Documents\GitHub\SmartHouse\SmartHouse\bin\Debug\GHI.Glide.dll
+C:\Users\John\Documents\GitHub\SmartHouse\SmartHouse\bin\Debug\GHI.Glide.xml
