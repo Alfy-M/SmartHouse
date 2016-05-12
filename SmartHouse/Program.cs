@@ -33,6 +33,7 @@ namespace SmartHouse
         private Boolean connected;
         private static Boolean connection;//true=wifi,false=RJ45
         GT.Timer timerMain = new GT.Timer(1000);
+        GT.Timer timerSend = new GT.Timer(2000);
 
   
        
@@ -41,7 +42,20 @@ namespace SmartHouse
         // This method is run when the mainboard is powered up or reset.   
         void ProgramStarted()
         {
-            window = GlideLoader.LoadWindow(Resources.GetString(Resources.StringResources.StartWindow));//carico window da mostrare
+            ShowConnectionWindow();
+
+           // GT.Timer timer = new GT.Timer(1000);
+           // timer.Tick += my_display_managment;
+           // timer.Start();
+
+     
+
+            // Use Debug.Print to show messages in Visual Studio's "Output" window during debugging.*/
+            Debug.Print("Program Started");
+        }
+
+        private void ShowConnectionWindow(){
+             window = GlideLoader.LoadWindow(Resources.GetString(Resources.StringResources.StartWindow));//carico window da mostrare
             GlideTouch.Initialize();
             Button b_rj = (Button)window.GetChildByName("rjbutton");
             Button b_wifi = (Button)window.GetChildByName("wifibutton");
@@ -52,15 +66,7 @@ namespace SmartHouse
             Glide.MainWindow = window;
 
             connected = false;
-
-           // GT.Timer timer = new GT.Timer(1000);
-           // timer.Tick += my_display_managment;
-           // timer.Start();
-
-     
-
-            // Use Debug.Print to show messages in Visual Studio's "Output" window during debugging.*/
-            Debug.Print("Program Started");
+        
         }
 
 
@@ -127,11 +133,23 @@ namespace SmartHouse
             gas_state.Checked = gasSense.HeatingElementEnabled;
             gas_state.TapEvent += gasonoff;
 
+            //back to connections button
+            Button back = (Button)window.GetChildByName("backtocon");
+            back.TapEvent += GoToConnections;
+
             //if need to write ip of board use
             //string ip=wifiRS21.NetworkInterface.IPAddress;
 
 
              Glide.MainWindow = window;
+        }
+
+        private void GoToConnections(object sender) {
+            wifiRS21.NetworkInterface.Disconnect();
+            wifiRS21.NetworkInterface.Close();
+            timerMain.Stop();
+           // timerMain.Tick += new GT.Timer.TickEventHandler((object sender) => { return; });
+            ShowConnectionWindow();
         }
 
 
@@ -183,16 +201,18 @@ namespace SmartHouse
             //Quando la connessione è "up" inizamo a trasmettere i dati al server
             Debug.Print("Network is up!");
             connected = true;
-            sendData();
+           // timerSend.Tick += sendData;
+            //timerSend.Start();
+           // sendData();
         }
-       
-    
-    public void sendData()
+
+
+        private void sendData()
         {
 
 
-            
-            string url = "http://192.168.43.244:51417/Service1.svc/load/"+tempHumidSI70.TakeMeasurement().Temperature.ToString()+"/"+tempHumidSI70.TakeMeasurement().RelativeHumidity.ToString()+"/"+gasSense.ReadProportion().ToString();
+
+            string url = "http://192.168.43.244:51417/Service1.svc/data/" + ( (tempHumidSI70.TakeMeasurement().Temperature*100)).ToString() + "/" + ((tempHumidSI70.TakeMeasurement().RelativeHumidity*100)).ToString() + "/" + ((gasSense.ReadProportion()*100)).ToString();
             Debug.Print(url);
             var request = HttpHelper.CreateHttpGetRequest(url);
             request.ResponseReceived += new HttpRequest.ResponseHandler(req_ResponseReceived);
