@@ -20,22 +20,15 @@ using Gadgeteer.Networking;
 using GT = Gadgeteer;
 using GTM = Gadgeteer.Modules;
 using Gadgeteer.Modules.GHIElectronics;
+using GHI.Networking;
+
 
 namespace SmartHouse
 {
    
     public partial class Program
     {
-      /*
-       // private Text txtSerial;
-       // private Rectangle button_gas;//UIElement type
-        private Canvas canvas;
-      
-        private Font baseFont;
-        private static Boolean connection;//true=wifi,false=RJ45;
-        private int window_id;//current menu:0-connection,1-main
-        private Boolean connected;
-        */
+     
         private static Window window;
         private Boolean connected;
         private static Boolean connection;//true=wifi,false=RJ45
@@ -81,11 +74,12 @@ namespace SmartHouse
 
      
         private void ChooseWiFi(object sender)
-        {
+        {   //connection wifi
             connection = true;
             gasSense.HeatingElementEnabled = true;
             timerMain.Tick += DrawMainWindow;
-            timerMain.Start();  
+            timerMain.Start(); 
+            wifiConnect();
            
         }
 
@@ -106,18 +100,35 @@ namespace SmartHouse
             TextBox gas_box = (TextBox)window.GetChildByName("gasvalue");
             gas_box.Text = gas.ToString("F2");
 
+            //show connection type
             TextBlock conn_type = (TextBlock)window.GetChildByName("context");
             if (connection)
             {
                 conn_type.Text = "WiFi";
+               
             }
             else {
                 conn_type.Text = "RJ45";
             }
-
+            //show connection status
+            TextBlock conn_true = (TextBlock)window.GetChildByName("constatustrue");
+            TextBlock conn_false = (TextBlock)window.GetChildByName("constatusfalse");
+            if (connected)
+            {
+                conn_true.Visible = true;
+                conn_false.Visible = false;
+            }
+            else {
+                conn_true.Visible = false;
+                conn_false.Visible = true; ;
+            }
+            //gas on off button
             CheckBox gas_state = (CheckBox)window.GetChildByName("gasonoff");
             gas_state.Checked = gasSense.HeatingElementEnabled;
             gas_state.TapEvent += gasonoff;
+
+            //if need to write ip of board use
+            //string ip=wifiRS21.NetworkInterface.IPAddress;
 
 
              Glide.MainWindow = window;
@@ -128,223 +139,84 @@ namespace SmartHouse
         {
             gasSense.HeatingElementEnabled = !gasSense.HeatingElementEnabled;
         }
-  
-        /*
 
-       void my_display_managment(GT.Timer timer){
-           if (connected)
-           {
-               if (window_id == 1) { my_display_main(); }
-           }
-           else {
-               my_connection_menu();
-           }
-        
-        }
-
-        void screen_click(object sender, Microsoft.SPOT.Input.TouchEventArgs e) {
-            int x;
-            int y;
-            e.GetPosition(displayT35.WPFWindow, 0, out x, out y);
-            if (window_id == 1)
-            {//se pressed on main menu
-                if (x >= 259 && x < 340 && y >= 199 && y < 240)
+        private void wifiConnect()
+        {
+            wifiRS21.NetworkUp += wifiRS21_NetworkUp;
+            wifiRS21.NetworkDown += wifiRS21_NetworkDown;
+            wifiRS21.NetworkInterface.Open();
+            wifiRS21.NetworkInterface.EnableDhcp();
+            wifiRS21.NetworkInterface.EnableDynamicDns();
+            WiFiRS9110.NetworkParameters[] scanResult = wifiRS21.NetworkInterface.Scan();
+            for (int i = 0; i < scanResult.Length; i++)
+            {
+                if (scanResult[i].Ssid == "PucciH")
                 {
-                    //gas on of button pressed
-                    if (gasSense.HeatingElementEnabled)
+                    try
                     {
-                        gasSense.HeatingElementEnabled = false;
-
+                        wifiRS21.NetworkInterface.Join(scanResult[i].Ssid, "marevivo");
                     }
-                    else
+                    catch (WiFiRS9110.JoinException e)
                     {
-                        gasSense.HeatingElementEnabled = true;
+                        Debug.Print("Error Message: " + e.Message);
                     }
-                    my_display_main();//TODO: see why not working faster
-
+                    break;
                 }
             }
-            if (window_id == 0) {
-                if ((y >= 60 && y < 120) ||( y >= 160 && y < 220))
-                {
-                    if (y >= 60 && y < 120)
-                    {//wifi chosen
-                        connection = true;
-                    }
-                    if (y >= 160 && y < 220)
-                    {//rj45 chosen
-                        connection = false;
-                    }
-                    //pressed on connecton menu
-                    connected = true;
-                    window_id = 1;//pass to next menu
-                    gasSense.HeatingElementEnabled = true;//turn on gas sensor
-                    //TODO: manage connections
-                }//else do nothing
-            }
+            /*
+            while (wifiRS21.NetworkInterface.IPAddress == "0.0.0.0")
+            {
+                Thread.Sleep(500);
+            }*/
+           // Debug.Print("Ip-Address = " + wifiRS21.NetworkInterface.IPAddress);
+            return;
+                
         }
-        
-        //void my_display_main(GT.Timer timer)
-        void my_display_main()
+        void wifiRS21_NetworkDown(GTM.Module.NetworkModule sender, GTM.Module.NetworkModule.NetworkState state)
+        {
+            Debug.Print("Network is down!");
+            connected = false;
+            
+        }
+        void wifiRS21_NetworkUp(GTM.Module.NetworkModule sender, GTM.Module.NetworkModule.NetworkState state)
+        {
+            //Quando la connessione è "up" inizamo a trasmettere i dati al server
+            Debug.Print("Network is up!");
+            connected = true;
+            sendData();
+        }
+       
+    
+    public void sendData()
         {
 
-            baseFont = Resources.GetFont(Resources.FontResources.NinaB);
-            canvas = new Canvas();
-            displayT35.WPFWindow.Background = new SolidColorBrush(GT.Color.Cyan);
-            displayT35.WPFWindow.Child = canvas;
-            TempHumidSI70.Measurement temp = tempHumidSI70.TakeMeasurement();
-
-            double gas = gasSense.ReadProportion();
-            String textt = temp.Temperature.ToString("F2");
-            String textu = temp.RelativeHumidity.ToString("F2");
-            String textg = gas.ToString("F2")+" (V: " +gasSense.ReadVoltage().ToString("F2")+" )";
-                  
-            baseFont = Resources.GetFont(Resources.FontResources.NinaB);
-      
-
-            //text
-            txtSerial = new Text(baseFont, "Temp: ");
-            txtSerial.ForeColor = GT.Color.Purple;
-            canvas.Children.Add(txtSerial);
-            Canvas.SetTop(txtSerial, 40);
-            Canvas.SetLeft(txtSerial, 60);
-
-         
-            txtSerial = new Text(baseFont, "Humidity: ");
-            txtSerial.ForeColor = GT.Color.Purple;
-            canvas.Children.Add(txtSerial);
-            Canvas.SetTop(txtSerial, 60);
-            Canvas.SetLeft(txtSerial, 60);
-
-   
-            txtSerial = new Text(baseFont, "Gas: ");
-            txtSerial.ForeColor = GT.Color.Purple;
-            canvas.Children.Add(txtSerial);
-            Canvas.SetTop(txtSerial, 80);
-            Canvas.SetLeft(txtSerial, 60);
-            //data from sensors
-            txtSerial = new Text(baseFont, textt);
-            canvas.Children.Add(txtSerial);
-            Canvas.SetTop(txtSerial, 40);
-            Canvas.SetLeft(txtSerial, 150);
-
-            txtSerial = new Text(baseFont, textu);
-            canvas.Children.Add(txtSerial);
-            Canvas.SetTop(txtSerial, 60);
-            Canvas.SetLeft(txtSerial, 150);
-
-            txtSerial = new Text(baseFont, textg);
-            canvas.Children.Add(txtSerial);
-            Canvas.SetTop(txtSerial, 80);
-            Canvas.SetLeft(txtSerial, 150);
-
-            //connection type
-                //draw frame
-            Rectangle button_gas = new Rectangle(154, 40);
-            button_gas.Stroke = new Pen(GT.Color.Purple);//colore di bordo
-            canvas.Children.Add(button_gas);
-            Canvas.SetTop(button_gas, 140);
-            Canvas.SetLeft(button_gas, 165);
-
-            txtSerial = new Text(baseFont, "Connection type: ");
-            canvas.Children.Add(txtSerial);
-            Canvas.SetTop(txtSerial, 150);
-            Canvas.SetLeft(txtSerial, 170);
-
-            if (connection) {
-                txtSerial = new Text(baseFont, "WiFi");
-                canvas.Children.Add(txtSerial);
-                Canvas.SetTop(txtSerial, 150);
-                Canvas.SetLeft(txtSerial, 285);
-
-            } else {
-                txtSerial = new Text(baseFont, "RJ45");
-                canvas.Children.Add(txtSerial);
-                Canvas.SetTop(txtSerial, 150);
-                Canvas.SetLeft(txtSerial, 285);
 
             
-            }
-
-            //gas on/of
-            txtSerial = new Text(baseFont, "Gas Sensor: ");
-            canvas.Children.Add(txtSerial);
-            Canvas.SetTop(txtSerial, 213);
-            Canvas.SetLeft(txtSerial,170);
-
-            button_gas = new Rectangle(100,60);
-            button_gas.Stroke = new Pen(GT.Color.Purple);//colore di bordo
-            canvas.Children.Add(button_gas);
-            Canvas.SetTop(button_gas, 199);
-            Canvas.SetLeft(button_gas, 259);
-    
-           //manage gas button state
-            if (gasSense.HeatingElementEnabled)
-            {
-                
-                txtSerial = new Text(baseFont, "ON");
-                canvas.Children.Add(txtSerial);
-                Canvas.SetTop(txtSerial,213);
-                Canvas.SetLeft(txtSerial, 280);
-                button_gas.Fill = new SolidColorBrush(GT.Color.Green);
-            }
-            else {
-               
-                txtSerial = new Text(baseFont, "OFF");
-                canvas.Children.Add(txtSerial);
-                Canvas.SetTop(txtSerial, 213);
-                Canvas.SetLeft(txtSerial, 280);
-                button_gas.Fill = new SolidColorBrush(GT.Color.Red);
-            }
-            
-            
-            //Debug.Print("Gas: " + gas);
-            
+            string url = "http://192.168.43.244:51417/Service1.svc/load/"+tempHumidSI70.TakeMeasurement().Temperature.ToString()+"/"+tempHumidSI70.TakeMeasurement().RelativeHumidity.ToString()+"/"+gasSense.ReadProportion().ToString();
+            Debug.Print(url);
+            var request = HttpHelper.CreateHttpGetRequest(url);
+            request.ResponseReceived += new HttpRequest.ResponseHandler(req_ResponseReceived);
+            request.SendRequest();
+            return;
 
         }
 
-        void my_connection_menu() {
+        void req_ResponseReceived(HttpRequest sender, HttpResponse response)
+        {
            
-            canvas = new Canvas();
-            displayT35.WPFWindow.Child = canvas;
-            displayT35.WPFWindow.Background = new SolidColorBrush(GT.Color.Blue);
-
-            txtSerial = new Text(baseFont, "Choose connection type");
-            txtSerial.ForeColor=GT.Color.Red;
-            canvas.Children.Add(txtSerial);
-            Canvas.SetTop(txtSerial,20);
-            Canvas.SetLeft(txtSerial, 80);
-
-            Rectangle button_wifi = new Rectangle(320, 60);
-            button_wifi.Fill = new SolidColorBrush(GT.Color.Green); ;//colore di bordo
-            canvas.Children.Add(button_wifi);
-            Canvas.SetTop(button_wifi, 60);
-            Canvas.SetLeft(button_wifi, 0);
-
-            txtSerial = new Text(baseFont, "WiFi");
-            txtSerial.ForeColor = GT.Color.White;
-            canvas.Children.Add(txtSerial);
-            Canvas.SetTop(txtSerial, 80);
-            Canvas.SetLeft(txtSerial, 145);
-
-            Rectangle button_rj = new Rectangle(320, 60);
-            button_rj.Fill = new SolidColorBrush(GT.Color.Green); ;//colore di bordo
-            canvas.Children.Add(button_rj);
-            Canvas.SetTop(button_rj, 160);
-            Canvas.SetLeft(button_rj, 0);
-
-            txtSerial = new Text(baseFont, "RJ45");
-            txtSerial.ForeColor = GT.Color.White;
-            canvas.Children.Add(txtSerial);
-            Canvas.SetTop(txtSerial, 180);
-            Canvas.SetLeft(txtSerial, 145);
-        
-        
-        
+            if (response.StatusCode != "200")
+            {
+                Debug.Print("Errore nella comunicazione con il server");
+             
+            }
+            else
+            {
+                Debug.Print("Invio avvenuto con successo (Code: "+response.StatusCode+")");
+                Debug.Print("Valore: " + response.Text+ ")");
+             
+            }
         }
-
-       */
-    }
    
 
+    }
 }

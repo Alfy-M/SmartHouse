@@ -9,5 +9,7 @@
     <TextBlock Name="instance10044" X="137" Y="185" Width="100" Height="32" Alpha="255" Text="Connection:" TextAlign="Left" TextVerticalAlign="Top" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
     <TextBlock Name="context" X="225" Y="185" Width="100" Height="32" Alpha="255" Text="TextBlock" TextAlign="Left" TextVerticalAlign="Top" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
     <CheckBox Name="gasonoff" X="210" Y="102" Width="32" Height="32" Alpha="255" Checked="False"/>
+    <TextBlock Name="constatustrue" X="181" Y="208" Width="100" Height="32" Alpha="255" Text="Connected" TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="32CD32" ShowBackColor="True"/>
+	 <TextBlock Name="constatusfalse" X="181" Y="208" Width="100" Height="32" Alpha="255" Text="Not connected" TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="FF0000" ShowBackColor="True"/>
   </Window>
 </Glide>
