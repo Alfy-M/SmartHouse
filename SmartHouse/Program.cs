@@ -33,7 +33,7 @@ namespace SmartHouse
         private Boolean connected;
         private static Boolean connection;//true=wifi,false=RJ45
         GT.Timer timerMain = new GT.Timer(1000);
-        GT.Timer timerSend = new GT.Timer(2000);
+        GT.Timer timerSend = new GT.Timer(15000);
 
   
        
@@ -134,8 +134,8 @@ namespace SmartHouse
             gas_state.TapEvent += gasonoff;
 
             //back to connections button
-            Button back = (Button)window.GetChildByName("backtocon");
-            back.TapEvent += GoToConnections;
+           // Button back = (Button)window.GetChildByName("backtocon");
+           // back.TapEvent += GoToConnections;
 
             //if need to write ip of board use
             //string ip=wifiRS21.NetworkInterface.IPAddress;
@@ -147,7 +147,7 @@ namespace SmartHouse
         private void GoToConnections(object sender) {
             wifiRS21.NetworkInterface.Disconnect();
             wifiRS21.NetworkInterface.Close();
-            timerMain.Stop();
+            //timerMain.Stop();
            // timerMain.Tick += new GT.Timer.TickEventHandler((object sender) => { return; });
             ShowConnectionWindow();
         }
@@ -201,18 +201,18 @@ namespace SmartHouse
             //Quando la connessione è "up" inizamo a trasmettere i dati al server
             Debug.Print("Network is up!");
             connected = true;
-           // timerSend.Tick += sendData;
-            //timerSend.Start();
-           // sendData();
+            timerSend.Tick += sendData;
+            timerSend.Start();//TODO: Capire perche' parte dopo tot tempo!!!!
+            //sendData();
         }
 
 
-        private void sendData()
+        private void sendData(GT.Timer tim)
         {
 
 
 
-            string url = "http://192.168.43.244:51417/Service1.svc/data/" + ( (tempHumidSI70.TakeMeasurement().Temperature*100)).ToString() + "/" + ((tempHumidSI70.TakeMeasurement().RelativeHumidity*100)).ToString() + "/" + ((gasSense.ReadProportion()*100)).ToString();
+            string url = "http://192.168.43.244:51417/Service1.svc/data/" + ((int)(tempHumidSI70.TakeMeasurement().Temperature * 100)).ToString() + "/" + ((int)(tempHumidSI70.TakeMeasurement().RelativeHumidity * 100)).ToString() + "/" + ((int)(gasSense.ReadProportion() * 100)).ToString();
             Debug.Print(url);
             var request = HttpHelper.CreateHttpGetRequest(url);
             request.ResponseReceived += new HttpRequest.ResponseHandler(req_ResponseReceived);
