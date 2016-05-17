@@ -33,7 +33,8 @@ namespace SmartHouse
         private Boolean connected;
         private static Boolean connection;//true=wifi,false=RJ45
         GT.Timer timerMain = new GT.Timer(1000);
-        GT.Timer timerSend = new GT.Timer(15000);
+        GT.Timer timerSend = new GT.Timer(1000);
+        Button back_to_con;//deve essere globale,altrimenti il suo ciclo di vita e' piu' corta del handler! e si incasina tutto!
 
   
        
@@ -134,8 +135,8 @@ namespace SmartHouse
             gas_state.TapEvent += gasonoff;
 
             //back to connections button
-           // Button back = (Button)window.GetChildByName("backtocon");
-           // back.TapEvent += GoToConnections;
+           back_to_con = (Button)window.GetChildByName("backtocon");
+           back_to_con.TapEvent += GoToConnections;
 
             //if need to write ip of board use
             //string ip=wifiRS21.NetworkInterface.IPAddress;
@@ -145,10 +146,17 @@ namespace SmartHouse
         }
 
         private void GoToConnections(object sender) {
-            wifiRS21.NetworkInterface.Disconnect();
+            if (wifiRS21.NetworkInterface.LinkConnected)
+            {
+                wifiRS21.NetworkInterface.Disconnect();
+            }
             wifiRS21.NetworkInterface.Close();
-            //timerMain.Stop();
-           // timerMain.Tick += new GT.Timer.TickEventHandler((object sender) => { return; });
+            timerMain.Stop();
+            timerSend.Stop();
+            
+            timerSend.Tick -= sendData;
+            timerMain.Tick -= DrawMainWindow;
+           Thread.Sleep(1500);
             ShowConnectionWindow();
         }
 
@@ -201,7 +209,7 @@ namespace SmartHouse
             //Quando la connessione è "up" inizamo a trasmettere i dati al server
             Debug.Print("Network is up!");
             connected = true;
-            timerSend.Tick += sendData;
+             timerSend.Tick += sendData;
             timerSend.Start();//TODO: Capire perche' parte dopo tot tempo!!!!
             //sendData();
         }
@@ -214,9 +222,12 @@ namespace SmartHouse
 
             string url = "http://192.168.43.244:51417/Service1.svc/data/" + ((int)(tempHumidSI70.TakeMeasurement().Temperature * 100)).ToString() + "/" + ((int)(tempHumidSI70.TakeMeasurement().RelativeHumidity * 100)).ToString() + "/" + ((int)(gasSense.ReadProportion() * 100)).ToString();
             Debug.Print(url);
-            var request = HttpHelper.CreateHttpGetRequest(url);
-            request.ResponseReceived += new HttpRequest.ResponseHandler(req_ResponseReceived);
-            request.SendRequest();
+            if (connected)
+            {
+                var request = HttpHelper.CreateHttpGetRequest(url);
+                request.ResponseReceived += new HttpRequest.ResponseHandler(req_ResponseReceived);
+                request.SendRequest();
+            }
             return;
 
         }
