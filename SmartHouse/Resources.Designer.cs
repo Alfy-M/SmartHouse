@@ -44,6 +44,7 @@ namespace SmartHouse
         {
             MainWindow = 14107,
             StartWindow = 14420,
+            ComWindow = 32445,
         }
     }
 }

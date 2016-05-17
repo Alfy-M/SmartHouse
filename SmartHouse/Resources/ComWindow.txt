@@ -1,0 +1,16 @@
+<Glide Version="1.0.7">
+  <Window Name="instance115" Width="320" Height="240" BackColor="FFFFFF">
+    <Button Name="mday" X="0" Y="63" Width="80" Height="32" Alpha="255" Text="day" Font="4" FontColor="000000" DisabledFontColor="808080" TintColor="000000" TintAmount="0"/>
+    <Button Name="mweek" X="120" Y="63" Width="80" Height="32" Alpha="255" Text="week" Font="4" FontColor="000000" DisabledFontColor="808080" TintColor="000000" TintAmount="0"/>
+    <Button Name="mmonth" X="240" Y="63" Width="80" Height="32" Alpha="255" Text="Button" Font="4" FontColor="000000" DisabledFontColor="808080" TintColor="000000" TintAmount="0"/>
+    <TextBlock Name="loading" X="110" Y="104" Width="100" Height="32" Alpha="255" Text="Loading...." TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
+    <TextBlock Name="title" X="57" Y="12" Width="200" Height="32" Alpha="255" Text="Get medium values for:" TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
+    <TextBlock Name="temptext" X="10" Y="142" Width="100" Height="32" Alpha="255" Text="Temperature" TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
+    <TextBox Name="tempdata" X="126" Y="142" Width="80" Height="32" Alpha="255" Text="" TextAlign="Left" Font="4" FontColor="000000"/>
+    <TextBlock Name="humtext" X="10" Y="174" Width="100" Height="32" Alpha="255" Text="Humidity" TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
+    <TextBox Name="humdata" X="126" Y="175" Width="80" Height="32" Alpha="255" Text="" TextAlign="Left" Font="4" FontColor="000000"/>
+    <TextBlock Name="gastext" X="10" Y="208" Width="100" Height="32" Alpha="255" Text="Gas" TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
+    <TextBox Name="gasdata" X="126" Y="208" Width="80" Height="32" Alpha="255" Text="" TextAlign="Left" Font="4" FontColor="000000"/>
+    <Button Name="backtomain" X="236" Y="208" Width="80" Height="32" Alpha="255" Text="Back" Font="4" FontColor="000000" DisabledFontColor="808080" TintColor="000000" TintAmount="0"/>
+  </Window>
+</Glide>

@@ -30,12 +30,29 @@ namespace SmartHouse
     {
      
         private static Window window;
-        private Boolean connected;
         private static Boolean connection;//true=wifi,false=RJ45
-        GT.Timer timerMain = new GT.Timer(1000);
-        GT.Timer timerSend = new GT.Timer(1000);
-        Button back_to_con;//deve essere globale,altrimenti il suo ciclo di vita e' piu' corta del handler! e si incasina tutto!
 
+        int navigation_delay = 1500;
+        
+        GT.Timer timerSend = new GT.Timer(1000*10);
+
+        Boolean server_available = false;
+
+        //variablse for main
+        private Boolean connected;
+        GT.Timer timerMain = new GT.Timer(1000);
+        Button back_to_con;//deve essere globale,altrimenti il suo ciclo di vita e' piu' corta del handler! e si incasina tutto!
+        Button go_to_menu;
+        CheckBox gas_state;
+       
+        //variablse for menu
+        Button back_to_main; 
+        Button ask_mday;
+        Button ask_mweek;
+        Button ask_mmonth;
+        Boolean dataready = false;
+        Boolean datarequested = false;
+        
   
        
        
@@ -75,6 +92,7 @@ namespace SmartHouse
         {
             connection = false;
             gasSense.HeatingElementEnabled = true;
+            //TODO:Add connection
             timerMain.Tick += DrawMainWindow;
             timerMain.Start(); 
         }
@@ -84,10 +102,44 @@ namespace SmartHouse
         {   //connection wifi
             connection = true;
             gasSense.HeatingElementEnabled = true;
-            timerMain.Tick += DrawMainWindow;
-            timerMain.Start(); 
             wifiConnect();
-           
+           // Thread.Sleep(500);
+            timerMain.Tick += DrawMainWindow;
+            timerMain.Start();    
+        }
+
+        private void GoToMain(object sender){
+            
+            ask_mday.TapEvent -= SendReqDay;
+            ask_mweek.TapEvent -= SendReqWeek;
+            ask_mmonth.TapEvent -= SendReqMonth;
+            back_to_main.TapEvent -= GoToMain;
+            datarequested = false;
+            dataready = false;
+            timerMain.Tick += DrawMainWindow;
+            timerMain.Start();
+        }
+
+        private void GoToMenu(object sender){
+            timerMain.Tick -= DrawMainWindow;
+            timerMain.Stop();
+           Thread.Sleep(navigation_delay);
+            DrawMenu();
+        }
+
+        
+        private void GoToConnections(object sender) {
+            if (wifiRS21.NetworkInterface.LinkConnected)
+            {
+                wifiRS21.NetworkInterface.Disconnect();
+            }
+            wifiRS21.NetworkInterface.Close();
+            timerMain.Stop();
+            timerSend.Stop(); 
+            timerSend.Tick -= sendData;
+            timerMain.Tick -= DrawMainWindow;
+           Thread.Sleep(navigation_delay);
+            ShowConnectionWindow();
         }
 
         private void DrawMainWindow(GT.Timer timer)
@@ -129,14 +181,30 @@ namespace SmartHouse
                 conn_true.Visible = false;
                 conn_false.Visible = true; ;
             }
+            //show server status
+            TextBlock server_true = (TextBlock)window.GetChildByName("serverstatustrue");
+            TextBlock server_false = (TextBlock)window.GetChildByName("serverstatusfalse");
+            if (connected)
+            {
+                server_true.Visible = true;
+                server_false.Visible = false;
+            }
+            else
+            {
+                server_true.Visible = false;
+                server_false.Visible = true; ;
+            }
             //gas on off button
-            CheckBox gas_state = (CheckBox)window.GetChildByName("gasonoff");
+            gas_state = (CheckBox)window.GetChildByName("gasonoff");
             gas_state.Checked = gasSense.HeatingElementEnabled;
             gas_state.TapEvent += gasonoff;
 
             //back to connections button
            back_to_con = (Button)window.GetChildByName("backtocon");
            back_to_con.TapEvent += GoToConnections;
+            //go to menu
+           go_to_menu = (Button)window.GetChildByName("menu");
+           go_to_menu.TapEvent += GoToMenu;
 
             //if need to write ip of board use
             //string ip=wifiRS21.NetworkInterface.IPAddress;
@@ -145,20 +213,68 @@ namespace SmartHouse
              Glide.MainWindow = window;
         }
 
-        private void GoToConnections(object sender) {
-            if (wifiRS21.NetworkInterface.LinkConnected)
+        private void DrawMenu() {
+            window = GlideLoader.LoadWindow(Resources.GetString(Resources.StringResources.ComWindow));//carico window da mostrare
+            GlideTouch.Initialize();
+
+            TextBlock loading = (TextBlock)window.GetChildByName("loading");
+            TextBlock temp_text = (TextBlock)window.GetChildByName("temptext");
+            TextBlock hum_text = (TextBlock)window.GetChildByName("humtext");
+            TextBlock gas_text = (TextBlock)window.GetChildByName("gastext");
+            TextBox temp_data = (TextBox)window.GetChildByName("tempdata");
+            TextBox hum_data = (TextBox)window.GetChildByName("humdata");
+            TextBox gas_data = (TextBox)window.GetChildByName("gasdata");
+
+            //ch0ose what to show
+            if (dataready)
             {
-                wifiRS21.NetworkInterface.Disconnect();
+                loading.Visible = false;
+                temp_text.Visible = true;
+                hum_text.Visible = true;
+                gas_text.Visible = true;
+                temp_data.Visible = true;
+                hum_data.Visible = true;
+                gas_data.Visible = true;
+                //TODO:riempire campi con valori ricevuti
             }
-            wifiRS21.NetworkInterface.Close();
-            timerMain.Stop();
-            timerSend.Stop();
+            else {
+                if (datarequested)
+                {
+                    loading.Visible = true;
+                }
+                else {
+                    loading.Visible = false; ;
+                }
+                temp_text.Visible = false;
+                hum_text.Visible = false;
+                gas_text.Visible = false;
+                temp_data.Visible = false;
+                hum_data.Visible = false;
+                gas_data.Visible = false;
             
-            timerSend.Tick -= sendData;
-            timerMain.Tick -= DrawMainWindow;
-           Thread.Sleep(1500);
-            ShowConnectionWindow();
+            }
+
+            //buttons inizialization
+
+            ask_mday = (Button)window.GetChildByName("mday");
+            ask_mday.TapEvent +=SendReqDay;
+
+            ask_mweek = (Button)window.GetChildByName("mweek");
+            ask_mweek.TapEvent +=SendReqWeek;
+
+            ask_mmonth = (Button)window.GetChildByName("mmonth");
+            ask_mmonth.TapEvent +=SendReqMonth;
+
+
+           back_to_main = (Button)window.GetChildByName("backtomain");
+           back_to_main.TapEvent += GoToMain;
+
+
+            Glide.MainWindow = window;
+        
         }
+
+
 
 
         private void gasonoff(object sender)
@@ -209,24 +325,28 @@ namespace SmartHouse
             //Quando la connessione è "up" inizamo a trasmettere i dati al server
             Debug.Print("Network is up!");
             connected = true;
-             timerSend.Tick += sendData;
+            server_available = true;
+            timerSend.Tick += sendData;
             timerSend.Start();//TODO: Capire perche' parte dopo tot tempo!!!!
-            //sendData();
         }
 
 
         private void sendData(GT.Timer tim)
         {
-
-
-
-            string url = "http://192.168.43.244:51417/Service1.svc/data/" + ((int)(tempHumidSI70.TakeMeasurement().Temperature * 100)).ToString() + "/" + ((int)(tempHumidSI70.TakeMeasurement().RelativeHumidity * 100)).ToString() + "/" + ((int)(gasSense.ReadProportion() * 100)).ToString();
-            Debug.Print(url);
-            if (connected)
+            if (server_available && connected)
             {
-                var request = HttpHelper.CreateHttpGetRequest(url);
-                request.ResponseReceived += new HttpRequest.ResponseHandler(req_ResponseReceived);
-                request.SendRequest();
+                try {
+                    string url = "http://192.168.43.244:51417/Service1.svc/data/" + ((int)(tempHumidSI70.TakeMeasurement().Temperature * 100)).ToString() + "/" + ((int)(tempHumidSI70.TakeMeasurement().RelativeHumidity * 100)).ToString() + "/" + ((int)(gasSense.ReadProportion() * 100)).ToString();
+                    Debug.Print(url);
+                    var request = HttpHelper.CreateHttpGetRequest(url);
+                    request.ResponseReceived += new HttpRequest.ResponseHandler(req_ResponseReceived);
+                    request.SendRequest();     
+                }
+                catch (System.ObjectDisposedException)
+                {
+                    server_available = false;
+                    return;
+                }
             }
             return;
 
@@ -247,6 +367,24 @@ namespace SmartHouse
              
             }
         }
+
+       private void SendReqDay(object sender){
+            datarequested=true;
+            //TODO
+            DrawMenu();
+        }
+
+       private void SendReqWeek(object sender){
+            datarequested=true;
+            //TODO
+            DrawMenu();
+        }
+        private void SendReqMonth(object sender){
+            datarequested=true;
+            //TODO
+            DrawMenu();
+        }
+
    
 
     }

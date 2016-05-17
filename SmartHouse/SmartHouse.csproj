@@ -114,4 +114,7 @@
   <ItemGroup>
     <None Include="Resources\MainWindow.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\ComWindow.txt" />
+  </ItemGroup>
 </Project>
