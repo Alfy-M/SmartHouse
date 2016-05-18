@@ -16,11 +16,13 @@ using GHI.Glide.UI;
 
 
 
+
 using Gadgeteer.Networking;
 using GT = Gadgeteer;
 using GTM = Gadgeteer.Modules;
 using Gadgeteer.Modules.GHIElectronics;
 using GHI.Networking;
+
 
 
 namespace SmartHouse
@@ -61,12 +63,6 @@ namespace SmartHouse
         void ProgramStarted()
         {
             ShowConnectionWindow();
-
-           // GT.Timer timer = new GT.Timer(1000);
-           // timer.Tick += my_display_managment;
-           // timer.Start();
-
-     
 
             // Use Debug.Print to show messages in Visual Studio's "Output" window during debugging.*/
             Debug.Print("Program Started");
@@ -129,11 +125,17 @@ namespace SmartHouse
 
         
         private void GoToConnections(object sender) {
-            if (wifiRS21.NetworkInterface.LinkConnected)
-            {
-                wifiRS21.NetworkInterface.Disconnect();
+            if (connection)
+            {//close wifi
+                if (wifiRS21.NetworkInterface.LinkConnected)
+                {
+                    wifiRS21.NetworkInterface.Disconnect();
+                }
+                wifiRS21.NetworkInterface.Close();
             }
-            wifiRS21.NetworkInterface.Close();
+            else { 
+                //TODO: close rj45
+            }
             timerMain.Stop();
             timerSend.Stop(); 
             timerSend.Tick -= sendData;
@@ -335,15 +337,18 @@ namespace SmartHouse
         {
             if (server_available && connected)
             {
-                try {
+                try
+                {
                     string url = "http://192.168.43.244:51417/Service1.svc/data/" + ((int)(tempHumidSI70.TakeMeasurement().Temperature * 100)).ToString() + "/" + ((int)(tempHumidSI70.TakeMeasurement().RelativeHumidity * 100)).ToString() + "/" + ((int)(gasSense.ReadProportion() * 100)).ToString();
                     Debug.Print(url);
                     var request = HttpHelper.CreateHttpGetRequest(url);
+                    //HttpRequest r = HttpHelper.CreateHttpPostRequest(url); 
                     request.ResponseReceived += new HttpRequest.ResponseHandler(req_ResponseReceived);
-                    request.SendRequest();     
+                    request.SendRequest();
                 }
-                catch (System.ObjectDisposedException)
+                catch (Exception e)
                 {
+                    Debug.Print("Trovato eccezione" + e.Message);
                     server_available = false;
                     return;
                 }
