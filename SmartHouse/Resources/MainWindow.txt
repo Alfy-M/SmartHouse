@@ -10,9 +10,9 @@
     <TextBlock Name="context" X="104" Y="142" Width="100" Height="32" Alpha="255" Text="TextBlock" TextAlign="Left" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
     <CheckBox Name="gasonoff" X="210" Y="102" Width="32" Height="32" Alpha="255" Checked="False"/>
     <TextBlock Name="constatustrue" X="198" Y="142" Width="100" Height="30" Alpha="255" Text="Connected" TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="32CD32" ShowBackColor="True"/>
-    <TextBlock Name="constatusfalse" X="198" Y="174" Width="100" Height="30" Alpha="255" Text="Not connected" TextAlign="Center" TextVerticalAlign="Middle" Font="2" FontColor="0" BackColor="FF0000" ShowBackColor="True"/>
+    <TextBlock Name="constatusfalse" X="198" Y="142" Width="100" Height="30" Alpha="255" Text="Not connected" TextAlign="Center" TextVerticalAlign="Middle" Font="2" FontColor="0" BackColor="FF0000" ShowBackColor="True"/>
     <TextBlock Name="serverstatustrue" X="198" Y="174" Width="100" Height="30" Alpha="255" Text="Connected" TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="32CD32" ShowBackColor="True"/>
-    <TextBlock Name="serverstatusfalse" X="198" Y="142" Width="100" Height="30" Alpha="255" Text="Not connected" TextAlign="Center" TextVerticalAlign="Middle" Font="2" FontColor="0" BackColor="FF0000" ShowBackColor="True"/>
+    <TextBlock Name="serverstatusfalse" X="198" Y="174" Width="100" Height="30" Alpha="255" Text="Not connected" TextAlign="Center" TextVerticalAlign="Middle" Font="2" FontColor="0" BackColor="FF0000" ShowBackColor="True"/>
     <Button Name="backtocon" X="0" Y="206" Width="80" Height="32" Alpha="255" Text="Back" Font="4" FontColor="000000" DisabledFontColor="808080" TintColor="000000" TintAmount="0"/>
     <Button Name="menu" X="90" Y="206" Width="80" Height="32" Alpha="255" Text="Menu" Font="4" FontColor="000000" DisabledFontColor="808080" TintColor="000000" TintAmount="0"/>
     <TextBlock Name="serverstatus" X="90" Y="174" Width="100" Height="32" Alpha="255" Text="Server" TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
