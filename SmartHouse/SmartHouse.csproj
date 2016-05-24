@@ -73,6 +73,9 @@
     <Reference Include="GTM.GHIElectronics.DisplayT35, Version=4.3.7.10, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
     </Reference>
+    <Reference Include="GTM.GHIElectronics.EthernetJ11D, Version=4.3.7.10, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
     <Reference Include="GTM.GHIElectronics.GasSense, Version=4.3.7.10, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
     </Reference>
@@ -120,5 +123,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\AttentionWindow.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\ConnectorsAlarmWindow.txt" />
   </ItemGroup>
 </Project>

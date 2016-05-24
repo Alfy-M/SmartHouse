@@ -289,3 +289,9 @@ C:\Users\John\Documents\GitHub\SmartHouse\SmartHouse\bin\Debug\Gadgeteer.WebServ
 C:\Users\John\Documents\GitHub\SmartHouse\SmartHouse\bin\Debug\Gadgeteer.WebServer.xml
 C:\Users\John\Documents\GitHub\SmartHouse\SmartHouse\bin\Debug\GHI.Networking.xml
 C:\Users\John\Documents\GitHub\SmartHouse\SmartHouse\bin\Debug\GTM.GHIElectronics.WiFiRS21.xml
+C:\Users\John\Documents\GitHub\SmartHouse\SmartHouse\bin\Debug\LE\GTM.GHIElectronics.EthernetJ11D.pe
+C:\Users\John\Documents\GitHub\SmartHouse\SmartHouse\bin\Debug\BE\GTM.GHIElectronics.EthernetJ11D.pe
+C:\Users\John\Documents\GitHub\SmartHouse\SmartHouse\bin\Debug\LE\GTM.GHIElectronics.EthernetJ11D.pdbx
+C:\Users\John\Documents\GitHub\SmartHouse\SmartHouse\bin\Debug\BE\GTM.GHIElectronics.EthernetJ11D.pdbx
+C:\Users\John\Documents\GitHub\SmartHouse\SmartHouse\bin\Debug\GTM.GHIElectronics.EthernetJ11D.dll
+C:\Users\John\Documents\GitHub\SmartHouse\SmartHouse\bin\Debug\GTM.GHIElectronics.EthernetJ11D.xml

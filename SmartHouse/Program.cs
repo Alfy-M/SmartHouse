@@ -35,6 +35,7 @@ namespace SmartHouse
         int navigation_delay = 1500;
 
         String pwd = "armando";
+        private Object myLock = new Object();
 
         //variables for send data
         GT.Timer timerSend = new GT.Timer(60*1000);//1 minute
@@ -64,6 +65,9 @@ namespace SmartHouse
         Boolean noAlarm;//to disactivate alarm check after one read it
         GT.Timer ResetNoAlarm = new GT.Timer(90 * 1000);//ogni 1.5 reshow alarm if error stil active;
 
+        //variable bad connectors
+        Button reset;
+
         //variablse for connection menu
         Button b_rj ;
         Button b_wifi;
@@ -77,7 +81,7 @@ namespace SmartHouse
         void ProgramStarted()
         {
             noAlarm = false;
-                ShowConnectionWindow();
+            ShowConnectionWindow();
                 
            
             // Use Debug.Print to show messages in Visual Studio's "Output" window during debugging.*/
@@ -104,78 +108,164 @@ namespace SmartHouse
 
         private void ChooseRJ(object sender)
         {
-            connection = false;
-            gasSense.HeatingElementEnabled = true;
-            //TODO:Add connection
-            timerMain.Tick += DrawMainWindow;
-            timerMain.Start();
-            return;
+            try
+            {
+                lock (myLock)
+                {
+                    connection = false;
+                    gasSense.HeatingElementEnabled = true;
+                    SetupEthernet();
+                    ethernetJ11D.NetworkUp += OnNetworkUp;
+                    ethernetJ11D.NetworkDown += OnNetworkDown;
+                    DrawMainWindow();//to avoid delay due to timer
+                    ListNetworkInterfaces();
+                    timerMain.Tick += DrawMainWindow;
+                    timerMain.Start();
+                    return;
+                }
+            }
+            catch (System.ApplicationException)
+            {  
+                    DrawConnetorsAlarmWindow();
+                    return;
+            }
+            catch (System.Exception)
+            {
+                    DrawConnetorsAlarmWindow();
+                    return;
+
+            }
         }
 
      
         private void ChooseWiFi(object sender)
         {   //connection wifi
-            connection = true;
-            gasSense.HeatingElementEnabled = true;
-            DrawMainWindow();//to avoid delay due to timer
-            timerMain.Tick += DrawMainWindow;
-            timerMain.Start();
-            wifiConnect();
-            return;
+            try
+            {
+                lock (myLock)
+                {
+                    connection = true;
+                    gasSense.HeatingElementEnabled = true;
+                    DrawMainWindow();//to avoid delay due to timer
+                    timerMain.Tick += DrawMainWindow;
+                    timerMain.Start();
+                    wifiConnect();
+                    return;
+                }
+            }
+            catch (System.ApplicationException a)
+            {
+                DrawConnetorsAlarmWindow();
+                return;
+
+            }
+            catch (System.Exception)
+            {
+                DrawConnetorsAlarmWindow();
+                return;
+
+            }
         }
 
         private void GoToMainFromAlarm(object sender) {
-            timerMain.Tick += DrawMainWindow;
-            timerMain.Start();
-            DrawMainWindow();//to avoid delay due to timer
-            return;
+         
+                timerMain.Tick += DrawMainWindow;
+                timerMain.Start();
+                DrawMainWindow();//to avoid delay due to timer
+                return;
+          
         }
 
         private void GoToMain(object sender){
-            
-            ask_mday.TapEvent -= SendReqDay;
-            ask_mweek.TapEvent -= SendReqWeek;
-            ask_mmonth.TapEvent -= SendReqMonth;
-            back_to_main.TapEvent -= GoToMain;
-            datarequested = false;
-            dataready = false;
-            timerMain.Tick += DrawMainWindow;
-            timerMain.Start();
-            DrawMainWindow();//to avoid delay due to timer
-            return;
+            lock (myLock)
+            {
+                ask_mday.TapEvent -= SendReqDay;
+                ask_mweek.TapEvent -= SendReqWeek;
+                ask_mmonth.TapEvent -= SendReqMonth;
+                back_to_main.TapEvent -= GoToMain;
+                datarequested = false;
+                dataready = false;
+                timerMain.Tick += DrawMainWindow;
+                timerMain.Start();
+                DrawMainWindow();//to avoid delay due to timer
+                return;
+            }
         }
 
         private void GoToMenu(object sender){
-            timerMain.Tick -= DrawMainWindow;
-            timerMain.Stop();
-           Thread.Sleep(navigation_delay);
-            DrawMenu();
-            return;
+            lock (myLock)//per finire draw main e solo dopo andare a menu
+            {
+                timerMain.Tick -= DrawMainWindow;
+                timerMain.Stop();
+                //Thread.Sleep(navigation_delay);
+                DrawMenu();
+                return;
+            }
+        }
+
+        private void resetAll(object sender) {
+            lock (myLock)//altrimenti puo provare lanciare thread mentre tolgo handler
+            {
+                timerSend.Tick -= sendData;
+                timerMain.Tick -= DrawMainWindow;
+                timerRetryServer.Tick -= RetryServer;
+                ResetNoAlarm.Tick -= ActivateAlarm;
+                timerMain.Stop();
+                timerRetryServer.Stop();
+                timerSend.Stop();
+                ResetNoAlarm.Stop();
+                Mainboard.PostInit();
+                ShowConnectionWindow();
+            }
+            
         }
 
         
         private void GoToConnections(object sender) {
-            if (connection)
-            {//close wifi
-                if (wifiRS21.NetworkInterface.LinkConnected)
+            try
+            {
+                lock (myLock)//per evitare che schiaccio back mentre scrivo window
                 {
-                    wifiRS21.NetworkInterface.Disconnect();
+                    if (connection)
+                    {//close wifi
+                        wifiRS21.NetworkUp -= wifiRS21_NetworkUp;//altrimenti lancia piu' thread quando si conette
+                        wifiRS21.NetworkDown -= wifiRS21_NetworkDown;
+                        if (wifiRS21.NetworkInterface.LinkConnected)
+                        {
+                            wifiRS21.NetworkInterface.Disconnect();
+                        }
+                        wifiRS21.NetworkInterface.Close();
+                        wifiRS21.NetworkInterface.ReleaseDhcpLease();
+
+                    }
+                    else
+                    {
+                        ethernetJ11D.NetworkUp -= OnNetworkUp;
+                        ethernetJ11D.NetworkDown -= OnNetworkDown;
+                        ethernetJ11D.NetworkInterface.Close();
+                    }
+                    connected = false;
+                    server_available = false;
+                    timerSend.Tick -= sendData;
+                    timerMain.Tick -= DrawMainWindow;
+                    timerMain.Stop();
+                    timerSend.Stop();
+                    //Thread.Sleep(navigation_delay);
+                    ShowConnectionWindow();
                 }
-                wifiRS21.NetworkInterface.Close();
-                wifiRS21.NetworkInterface.ReleaseDhcpLease();
-               
             }
-            else { 
-                //TODO: close rj45
+            catch (System.ApplicationException a)
+            {
+                DrawConnetorsAlarmWindow();
+                return;
+
             }
-            connected = false;
-            server_available = false;
-            timerSend.Tick -= sendData;
-            timerMain.Tick -= DrawMainWindow;
-            timerMain.Stop();
-            timerSend.Stop();
-           Thread.Sleep(navigation_delay);
-            ShowConnectionWindow();
+            catch (System.Exception)
+            {
+                DrawConnetorsAlarmWindow();
+                return;
+
+            }
             return;
         }
 
@@ -186,183 +276,236 @@ namespace SmartHouse
         }
 
         private void DrawAlarmWindow(double atemp, double ahumid, double agas) {
-          
 
-            window = GlideLoader.LoadWindow(Resources.GetString(Resources.StringResources.AttentionWindow));
-            GlideTouch.Initialize();
-            TextBox temp_box = (TextBox)window.GetChildByName("atemp");
-            temp_box.Text = atemp.ToString("F2");
+            lock (myLock)
+            {
+                window = GlideLoader.LoadWindow(Resources.GetString(Resources.StringResources.AttentionWindow));
+                GlideTouch.Initialize();
+                TextBox temp_box = (TextBox)window.GetChildByName("atemp");
+                temp_box.Text = atemp.ToString("F2");
 
-            TextBox umid_box = (TextBox)window.GetChildByName("ahum");
-            umid_box.Text = ahumid.ToString("F2");
+                TextBox umid_box = (TextBox)window.GetChildByName("ahum");
+                umid_box.Text = ahumid.ToString("F2");
 
-            TextBox gas_box = (TextBox)window.GetChildByName("agas");
-            gas_box.Text = agas.ToString("F2");
+                TextBox gas_box = (TextBox)window.GetChildByName("agas");
+                gas_box.Text = agas.ToString("F2");
 
-           alarm_button_back= (Button)window.GetChildByName("back");
-           alarm_button_back.TapEvent += GoToMainFromAlarm;
+                alarm_button_back = (Button)window.GetChildByName("back");
+                alarm_button_back.TapEvent += GoToMainFromAlarm;
 
-            Glide.MainWindow = window;
-            return;
+                Glide.MainWindow = window;
+                return;
+            }
         
+        }
+
+        private void DrawConnetorsAlarmWindow(){
+            lock (myLock)
+            {
+                window = GlideLoader.LoadWindow(Resources.GetString(Resources.StringResources.CAlarmWindow));
+                GlideTouch.Initialize();
+                reset = (Button)window.GetChildByName("reset");
+                reset.TapEvent += resetAll;
+                Glide.MainWindow = window;
+                return;
+            }
         }
       
         private void DrawMainWindow()
         {
-            window = GlideLoader.LoadWindow(Resources.GetString(Resources.StringResources.MainWindow));//carico window da mostrare
-            GlideTouch.Initialize();
-            //read sensors
-            TempHumidSI70.Measurement temp = tempHumidSI70.TakeMeasurement();
-            double gas = gasSense.ReadProportion();
-            if (!noAlarm)
+            try
             {
-                //check data on anomalia
-                if (gas > 1 || temp.Temperature > 70 || temp.RelativeHumidity > 100)
+                lock (myLock)
                 {
-                    //ALARM
-                    //mandare subito errore
-                    sendData();
-                    timerMain.Tick -= DrawMainWindow;
-                    timerMain.Stop();
-                    Thread.Sleep(navigation_delay);
-                    DrawAlarmWindow(temp.Temperature, temp.RelativeHumidity, gas);
-                    noAlarm = true;
-                    ResetNoAlarm.Tick += ActivateAlarm;
-                    ResetNoAlarm.Start();
-                    return;
+                    window = GlideLoader.LoadWindow(Resources.GetString(Resources.StringResources.MainWindow));//carico window da mostrare
+                    GlideTouch.Initialize();
+                    //read sensors
 
+                    TempHumidSI70.Measurement temp = tempHumidSI70.TakeMeasurement();
+                    double gas = gasSense.ReadProportion();
+                    if (!noAlarm)
+                    {
+                        //check data on anomalia
+                        if (gas > 1 || temp.Temperature > 70 || temp.RelativeHumidity > 100)
+                        {
+                            //ALARM
+                            //n.b. Se durante attention message lui si connete/disconnette alla rete sara revisualizzato Main!!!!
+                            //mandare subito errore
+                            sendData();
+                            timerMain.Tick -= DrawMainWindow;
+                            timerMain.Stop();
+                            Thread.Sleep(navigation_delay);
+                            DrawAlarmWindow(temp.Temperature, temp.RelativeHumidity, gas);
+                            noAlarm = true;
+                            ResetNoAlarm.Tick += ActivateAlarm;
+                            ResetNoAlarm.Start();
+                            return;
+
+                        }
+                    }
+
+                    //fill stuff
+                    TextBox temp_box = (TextBox)window.GetChildByName("tempvalue");
+                    temp_box.Text = temp.Temperature.ToString("F2");
+
+                     TextBox umid_box = (TextBox)window.GetChildByName("umidvalue");
+                     umid_box.Text = temp.RelativeHumidity.ToString("F2");
+
+                    TextBox gas_box = (TextBox)window.GetChildByName("gasvalue");
+                    gas_box.Text = gas.ToString("F2");
+
+                    //show connection type
+                    TextBlock conn_type = (TextBlock)window.GetChildByName("context");
+                    if (connection)
+                    {
+                        conn_type.Text = "WiFi";
+
+                    }
+                    else
+                    {
+                        conn_type.Text = "RJ45";
+                    }
+                    //show connection status
+                    TextBlock conn_true = (TextBlock)window.GetChildByName("constatustrue");
+                    TextBlock conn_false = (TextBlock)window.GetChildByName("constatusfalse");
+                    if (connected)
+                    {
+                        conn_true.Visible = true;
+                        conn_false.Visible = false;
+                    }
+                    else
+                    {
+                        conn_true.Visible = false;
+                        conn_false.Visible = true; ;
+                    }
+                    //show server status
+                    TextBlock server_true = (TextBlock)window.GetChildByName("serverstatustrue");
+                    TextBlock server_false = (TextBlock)window.GetChildByName("serverstatusfalse");
+                    if (server_available)
+                    {
+                        server_true.Visible = true;
+                        server_false.Visible = false;
+                    }
+                    else
+                    {
+                        server_true.Visible = false;
+                        server_false.Visible = true; ;
+                    }
+                    //gas on off button
+                    gas_state = (CheckBox)window.GetChildByName("gasonoff");
+                    gas_state.Checked = gasSense.HeatingElementEnabled;
+                    gas_state.TapEvent += gasonoff;
+
+                    //back to connections button
+                    back_to_con = (Button)window.GetChildByName("backtocon");
+                    back_to_con.TapEvent += GoToConnections;
+                    //go to menu
+                    go_to_menu = (Button)window.GetChildByName("menu");
+                    go_to_menu.TapEvent += GoToMenu;
+
+                    //if need to write ip of board use
+                    //string ip=wifiRS21.NetworkInterface.IPAddress;
+
+
+                    Glide.MainWindow = window;
+                    return;
                 }
             }
-
-            //fill stuff
-            TextBox temp_box = (TextBox)window.GetChildByName("tempvalue");
-            temp_box.Text = temp.Temperature.ToString("F2");
-
-            TextBox umid_box = (TextBox)window.GetChildByName("umidvalue");
-            umid_box.Text = temp.RelativeHumidity.ToString("F2");
-
-            TextBox gas_box = (TextBox)window.GetChildByName("gasvalue");
-            gas_box.Text = gas.ToString("F2");
-
-            //show connection type
-            TextBlock conn_type = (TextBlock)window.GetChildByName("context");
-            if (connection)
-            {
-                conn_type.Text = "WiFi";
+            catch (System.ApplicationException ) {
+                DrawConnetorsAlarmWindow();
+                return;
 
             }
-            else
+            catch (System.Exception)
             {
-                conn_type.Text = "RJ45";
-            }
-            //show connection status
-            TextBlock conn_true = (TextBlock)window.GetChildByName("constatustrue");
-            TextBlock conn_false = (TextBlock)window.GetChildByName("constatusfalse");
-            if (connected)
-            {
-                conn_true.Visible = true;
-                conn_false.Visible = false;
-            }
-            else
-            {
-                conn_true.Visible = false;
-                conn_false.Visible = true; ;
-            }
-            //show server status
-            TextBlock server_true = (TextBlock)window.GetChildByName("serverstatustrue");
-            TextBlock server_false = (TextBlock)window.GetChildByName("serverstatusfalse");
-            if (server_available)
-            {
-                server_true.Visible = true;
-                server_false.Visible = false;
-            }
-            else
-            {
-                server_true.Visible = false;
-                server_false.Visible = true; ;
-            }
-            //gas on off button
-            gas_state = (CheckBox)window.GetChildByName("gasonoff");
-            gas_state.Checked = gasSense.HeatingElementEnabled;
-            gas_state.TapEvent += gasonoff;
+                DrawConnetorsAlarmWindow();
+                return;
 
-            //back to connections button
-            back_to_con = (Button)window.GetChildByName("backtocon");
-            back_to_con.TapEvent += GoToConnections;
-            //go to menu
-            go_to_menu = (Button)window.GetChildByName("menu");
-            go_to_menu.TapEvent += GoToMenu;
-
-            //if need to write ip of board use
-            //string ip=wifiRS21.NetworkInterface.IPAddress;
-
-
-            Glide.MainWindow = window;
-            return;
+            }
         }
 
         private void DrawMenu() {
-            window = GlideLoader.LoadWindow(Resources.GetString(Resources.StringResources.ComWindow));//carico window da mostrare
-            GlideTouch.Initialize();
-
-            TextBlock loading = (TextBlock)window.GetChildByName("loading");
-            TextBlock temp_text = (TextBlock)window.GetChildByName("temptext");
-            TextBlock hum_text = (TextBlock)window.GetChildByName("humtext");
-            TextBlock gas_text = (TextBlock)window.GetChildByName("gastext");
-            TextBox temp_data = (TextBox)window.GetChildByName("tempdata");
-            TextBox hum_data = (TextBox)window.GetChildByName("humdata");
-            TextBox gas_data = (TextBox)window.GetChildByName("gasdata");
-
-            //ch0ose what to show
-            if (dataready && !datarequested)
+            try
             {
-                loading.Visible = false;
-                temp_text.Visible = true;
-                hum_text.Visible = true;
-                gas_text.Visible = true;
-                temp_data.Visible = true;
-                hum_data.Visible = true;
-                gas_data.Visible = true;
-                //riempio campi letti
-                temp_data.Text = mtemp;
-                hum_data.Text = mhum;
-                gas_data.Text = mgas;
-            }
-            else {
-                if (datarequested)
+                lock (myLock)
                 {
-                    loading.Visible = true;
+                    window = GlideLoader.LoadWindow(Resources.GetString(Resources.StringResources.ComWindow));//carico window da mostrare
+                    GlideTouch.Initialize();
+
+                    TextBlock loading = (TextBlock)window.GetChildByName("loading");
+                    TextBlock temp_text = (TextBlock)window.GetChildByName("temptext");
+                    TextBlock hum_text = (TextBlock)window.GetChildByName("humtext");
+                    TextBlock gas_text = (TextBlock)window.GetChildByName("gastext");
+                    TextBox temp_data = (TextBox)window.GetChildByName("tempdata");
+                    TextBox hum_data = (TextBox)window.GetChildByName("humdata");
+                    TextBox gas_data = (TextBox)window.GetChildByName("gasdata");
+
+                    //ch0ose what to show
+                    if (dataready && !datarequested)
+                    {
+                        loading.Visible = false;
+                        temp_text.Visible = true;
+                        hum_text.Visible = true;
+                        gas_text.Visible = true;
+                        temp_data.Visible = true;
+                        hum_data.Visible = true;
+                        gas_data.Visible = true;
+                        //riempio campi letti
+                        temp_data.Text = mtemp;
+                        hum_data.Text = mhum;
+                        gas_data.Text = mgas;
+                    }
+                    else
+                    {
+                        if (datarequested)
+                        {
+                            loading.Visible = true;
+                        }
+                        else
+                        {
+                            loading.Visible = false; ;
+                        }
+                        temp_text.Visible = false;
+                        hum_text.Visible = false;
+                        gas_text.Visible = false;
+                        temp_data.Visible = false;
+                        hum_data.Visible = false;
+                        gas_data.Visible = false;
+
+                    }
+
+                    //buttons inizialization
+
+                    ask_mday = (Button)window.GetChildByName("mday");
+                    ask_mday.TapEvent += SendReqDay;
+
+                    ask_mweek = (Button)window.GetChildByName("mweek");
+                    ask_mweek.TapEvent += SendReqWeek;
+
+                    ask_mmonth = (Button)window.GetChildByName("mmonth");
+                    ask_mmonth.TapEvent += SendReqMonth;
+
+
+                    back_to_main = (Button)window.GetChildByName("backtomain");
+                    back_to_main.TapEvent += GoToMain;
+
+
+                    Glide.MainWindow = window;
+                    return;
                 }
-                else {
-                    loading.Visible = false; ;
-                }
-                temp_text.Visible = false;
-                hum_text.Visible = false;
-                gas_text.Visible = false;
-                temp_data.Visible = false;
-                hum_data.Visible = false;
-                gas_data.Visible = false;
-            
             }
+            catch (System.ApplicationException a)
+            {
+                DrawConnetorsAlarmWindow();
+                return;
 
-            //buttons inizialization
+            }
+            catch (System.Exception)
+            {
+                DrawConnetorsAlarmWindow();
+                return;
 
-            ask_mday = (Button)window.GetChildByName("mday");
-            ask_mday.TapEvent +=SendReqDay;
-
-            ask_mweek = (Button)window.GetChildByName("mweek");
-            ask_mweek.TapEvent +=SendReqWeek;
-
-            ask_mmonth = (Button)window.GetChildByName("mmonth");
-            ask_mmonth.TapEvent +=SendReqMonth;
-
-
-           back_to_main = (Button)window.GetChildByName("backtomain");
-           back_to_main.TapEvent += GoToMain;
-
-
-            Glide.MainWindow = window;
-            return;
+            }
         }
 
 
@@ -370,42 +513,116 @@ namespace SmartHouse
 
         private void gasonoff(object sender)
         {
-            gasSense.HeatingElementEnabled = !gasSense.HeatingElementEnabled;
+            try
+            {
+                gasSense.HeatingElementEnabled = !gasSense.HeatingElementEnabled;
+                return;
+            }
+            catch (System.ApplicationException a)
+            {
+                DrawConnetorsAlarmWindow();
+                return;
+
+            }
+            catch (System.Exception)
+            {
+                DrawConnetorsAlarmWindow();
+                return;
+
+            }
+        }
+        /*** per ethernet****/
+        void ListNetworkInterfaces()
+        {
+            var settings = ethernetJ11D.NetworkSettings;
+
+            Debug.Print("------------------------------------------------");
+            //Debug.Print("MAC: " + ByteExtensions.ToHexString(settings.PhysicalAddress, "-"));
+            Debug.Print("IP Address:   " + settings.IPAddress);
+            Debug.Print("DHCP Enabled: " + settings.IsDhcpEnabled);
+            Debug.Print("Subnet Mask:  " + settings.SubnetMask);
+            Debug.Print("Gateway:      " + settings.GatewayAddress);
+            Debug.Print("------------------------------------------------");
+        }
+
+
+
+        void SetupEthernet()
+        {
+            ethernetJ11D.NetworkInterface.Open();
+            ethernetJ11D.UseThisNetworkInterface();
+            ethernetJ11D.UseStaticIP(
+                "192.168.43.10",
+               "255.255.255.0",
+                "192.168.43.240");
+        }
+
+
+        void OnNetworkDown(GTM.Module.NetworkModule sender, GTM.Module.NetworkModule.NetworkState state)
+        {
+            Debug.Print("Network down.");
+            connected = false;
             return;
         }
 
+        void OnNetworkUp(GTM.Module.NetworkModule sender, GTM.Module.NetworkModule.NetworkState state)
+        {
+            Debug.Print("Network up.");
+            connected = true;
+            server_available = true;
+            DrawMainWindow();
+            timerSend.Tick += sendData;
+            timerSend.Start();
+            //sendData();
+            return;
+        }
+    /**end per ethernet**/
+
         private void wifiConnect()
         {
-            wifiRS21.NetworkUp += wifiRS21_NetworkUp;
-            wifiRS21.NetworkDown += wifiRS21_NetworkDown;
-            wifiRS21.NetworkInterface.Open();
-            wifiRS21.NetworkInterface.EnableDhcp();
-            wifiRS21.NetworkInterface.EnableDynamicDns();
-            WiFiRS9110.NetworkParameters[] scanResult = wifiRS21.NetworkInterface.Scan();
-            for (int i = 0; i < scanResult.Length; i++)
+            try
             {
-               if (scanResult[i].Ssid == "PucciH")
-                //if (scanResult[i].Ssid == "mazzancolla_wifi")
+                wifiRS21.NetworkUp += wifiRS21_NetworkUp;
+                wifiRS21.NetworkDown += wifiRS21_NetworkDown;
+                wifiRS21.NetworkInterface.Open();
+                wifiRS21.NetworkInterface.EnableDhcp();
+                wifiRS21.NetworkInterface.EnableDynamicDns();
+                WiFiRS9110.NetworkParameters[] scanResult = wifiRS21.NetworkInterface.Scan();
+                for (int i = 0; i < scanResult.Length; i++)
                 {
-                    try
+                    if (scanResult[i].Ssid == "PucciH")
                     {
-                        wifiRS21.NetworkInterface.Join(scanResult[i].Ssid, "marevivo");
-                        //wifiRS21.NetworkInterface.Join(scanResult[i].Ssid, "N0F4N4C4NN4");
+                        try
+                        {
+                            wifiRS21.NetworkInterface.Join(scanResult[i].Ssid, "marevivo");
+                        }
+                        catch (WiFiRS9110.JoinException e)
+                        {
+                            Debug.Print("Error Message: " + e.Message);
+                        }
+                        break;
                     }
-                    catch (WiFiRS9110.JoinException e)
-                    {
-                        Debug.Print("Error Message: " + e.Message);
-                    }
-                    break;
                 }
+                /*
+                while (wifiRS21.NetworkInterface.IPAddress == "0.0.0.0")
+                {
+                    Thread.Sleep(500);
+                }*/
+                // Debug.Print("Ip-Address = " + wifiRS21.NetworkInterface.IPAddress);
+                return;
             }
-            /*
-            while (wifiRS21.NetworkInterface.IPAddress == "0.0.0.0")
+            catch (System.ApplicationException a)
             {
-                Thread.Sleep(500);
-            }*/
-           // Debug.Print("Ip-Address = " + wifiRS21.NetworkInterface.IPAddress);
-            return;
+                DrawConnetorsAlarmWindow();
+                return;
+
+            }
+            catch (System.Exception)
+            {
+                DrawConnetorsAlarmWindow();
+                return;
+
+            }
                 
         }
         void wifiRS21_NetworkDown(GTM.Module.NetworkModule sender, GTM.Module.NetworkModule.NetworkState state)
@@ -452,7 +669,7 @@ namespace SmartHouse
                     // Create the request
                     var request = Gadgeteer.Networking.HttpHelper.CreateHttpPostRequest(
                         @"http://192.168.43.244:51417/Service1.svc/sendData" // the URL to post to
-                       // @"http://192.168.1.133:51417/Service1.svc/sendData"
+                       // @"http://169.254.121.227:51417/Service1.svc/sendData"
                         , content // the form values
                         , "application/xml" // the mime type for an HTTP form
                     );
@@ -462,8 +679,20 @@ namespace SmartHouse
                     request.SendRequest();
                     while (!request.IsReceived) ;
                    // Debug.Print("DEVO FINIRE ThREAD"); 
-                    
+
                 }
+                catch (System.ApplicationException a)
+                {
+                    DrawConnetorsAlarmWindow();
+                    return;
+
+                }
+                catch (System.Exception)
+                {
+                    DrawConnetorsAlarmWindow();
+                    return;
+
+                }/* //ingestibile
                 catch (Exception e)
                 {
                     Debug.Print("Trovato eccezione" + e.Message);
@@ -471,7 +700,9 @@ namespace SmartHouse
                     timerRetryServer.Tick += RetryServer;
                     timerRetryServer.Start();
                     return;
-                }
+                }*/
+                
+               
             }
             return;
 
@@ -517,9 +748,21 @@ namespace SmartHouse
                     request.SendRequest();
                     while (!request.IsReceived) ;
                 }
+                catch (System.ApplicationException a)
+                {
+                    DrawConnetorsAlarmWindow();
+                    return;
+
+                }
+                catch (System.Exception)
+                {
+                    DrawConnetorsAlarmWindow();
+                    return;
+
+                }/* //ingestibile
                 catch (Exception) {
                     //TODO:Anche se non funziona 
-                }
+                }*/
             }
             return;
         }
@@ -561,7 +804,6 @@ namespace SmartHouse
             {   //se sono tornato indietro inutile entrarci quando arriva risposta;
                 if (datarequested)
                 {
-                    //TODO:READ DATA FROM XML String
                     String r = response.Text;
                     var data = r.Split('|');
                     mtemp=data[1];

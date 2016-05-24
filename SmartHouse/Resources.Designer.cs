@@ -39,6 +39,7 @@ namespace SmartHouse
             AttentionWindow = -32275,
             MainWindow = 14107,
             StartWindow = 14420,
+            CAlarmWindow = 15978,
             ComWindow = 32445,
         }
         [System.SerializableAttribute()]

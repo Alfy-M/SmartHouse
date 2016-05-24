@@ -1,0 +1,7 @@
+<Glide Version="1.0.7">
+  <Window Name="instance115" Width="320" Height="240" BackColor="FF0000">
+    <TextBlock Name="instance438" X="62" Y="8" Width="200" Height="30" Alpha="255" Text="Attention" TextAlign="Center" TextVerticalAlign="Middle" Font="7" FontColor="0" BackColor="000000" ShowBackColor="False"/>
+    <Button Name="reset" X="120" Y="172" Width="80" Height="32" Alpha="255" Text="Reset" Font="4" FontColor="000000" DisabledFontColor="808080" TintColor="000000" TintAmount="0"/>
+    <TextBlock Name="msg" X="60" Y="68" Width="200" Height="60" Alpha="255" Text="Please check all connectors" TextAlign="Center" TextVerticalAlign="Middle" Font="5" FontColor="0" BackColor="000000" ShowBackColor="False"/>
+  </Window>
+</Glide>
