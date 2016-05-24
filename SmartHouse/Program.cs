@@ -34,6 +34,8 @@ namespace SmartHouse
 
         int navigation_delay = 1500;
 
+        String pwd = "armando";
+
         //variables for send data
         GT.Timer timerSend = new GT.Timer(60*1000);//1 minute
         GT.Timer timerRetryServer = new GT.Timer(10 * 60 * 1000);//riprovare mandare dati dopo 10 minuti
@@ -57,6 +59,11 @@ namespace SmartHouse
         String mhum;
         String mgas;
 
+       // variable for alarm
+        Button alarm_button_back;
+        Boolean noAlarm;//to disactivate alarm check after one read it
+        GT.Timer ResetNoAlarm = new GT.Timer(90 * 1000);//ogni 1.5 reshow alarm if error stil active;
+
         //variablse for connection menu
         Button b_rj ;
         Button b_wifi;
@@ -69,7 +76,7 @@ namespace SmartHouse
         // This method is run when the mainboard is powered up or reset.   
         void ProgramStarted()
         {
-            
+            noAlarm = false;
                 ShowConnectionWindow();
                 
            
@@ -117,6 +124,13 @@ namespace SmartHouse
             return;
         }
 
+        private void GoToMainFromAlarm(object sender) {
+            timerMain.Tick += DrawMainWindow;
+            timerMain.Start();
+            DrawMainWindow();//to avoid delay due to timer
+            return;
+        }
+
         private void GoToMain(object sender){
             
             ask_mday.TapEvent -= SendReqDay;
@@ -154,7 +168,8 @@ namespace SmartHouse
             else { 
                 //TODO: close rj45
             }
-             
+            connected = false;
+            server_available = false;
             timerSend.Tick -= sendData;
             timerMain.Tick -= DrawMainWindow;
             timerMain.Stop();
@@ -166,76 +181,32 @@ namespace SmartHouse
 
         private void DrawMainWindow(GT.Timer timer)
         {
-            window = GlideLoader.LoadWindow(Resources.GetString(Resources.StringResources.MainWindow));//carico window da mostrare
-            GlideTouch.Initialize();
-            //read sensors
-            TempHumidSI70.Measurement temp = tempHumidSI70.TakeMeasurement();
-            double gas = gasSense.ReadProportion();
-            //fill stuff
-            TextBox temp_box = (TextBox)window.GetChildByName("tempvalue"); 
-            temp_box.Text = temp.Temperature.ToString("F2");
-
-            TextBox umid_box = (TextBox)window.GetChildByName("umidvalue");
-            umid_box.Text = temp.RelativeHumidity.ToString("F2");
-
-            TextBox gas_box = (TextBox)window.GetChildByName("gasvalue");
-            gas_box.Text = gas.ToString("F2");
-
-            //show connection type
-            TextBlock conn_type = (TextBlock)window.GetChildByName("context");
-            if (connection)
-            {
-                conn_type.Text = "WiFi";
-               
-            }
-            else {
-                conn_type.Text = "RJ45";
-            }
-            //show connection status
-            TextBlock conn_true = (TextBlock)window.GetChildByName("constatustrue");
-            TextBlock conn_false = (TextBlock)window.GetChildByName("constatusfalse");
-            if (connected)
-            {
-                conn_true.Visible = true;
-                conn_false.Visible = false;
-            }
-            else {
-                conn_true.Visible = false;
-                conn_false.Visible = true; ;
-            }
-            //show server status
-            TextBlock server_true = (TextBlock)window.GetChildByName("serverstatustrue");
-            TextBlock server_false = (TextBlock)window.GetChildByName("serverstatusfalse");
-            if (server_available)
-            {
-                server_true.Visible = true;
-                server_false.Visible = false;
-            }
-            else
-            {
-                server_true.Visible = false;
-                server_false.Visible = true; ;
-            }
-            //gas on off button
-            gas_state = (CheckBox)window.GetChildByName("gasonoff");
-            gas_state.Checked = gasSense.HeatingElementEnabled;
-            gas_state.TapEvent += gasonoff;
-
-            //back to connections button
-           back_to_con = (Button)window.GetChildByName("backtocon");
-           back_to_con.TapEvent += GoToConnections;
-            //go to menu
-           go_to_menu = (Button)window.GetChildByName("menu");
-           go_to_menu.TapEvent += GoToMenu;
-
-            //if need to write ip of board use
-            //string ip=wifiRS21.NetworkInterface.IPAddress;
-
-
-             Glide.MainWindow = window;
-             return;
+            DrawMainWindow();
+            return;
         }
-        //this function to draw on start without waiting timer delay
+
+        private void DrawAlarmWindow(double atemp, double ahumid, double agas) {
+          
+
+            window = GlideLoader.LoadWindow(Resources.GetString(Resources.StringResources.AttentionWindow));
+            GlideTouch.Initialize();
+            TextBox temp_box = (TextBox)window.GetChildByName("atemp");
+            temp_box.Text = atemp.ToString("F2");
+
+            TextBox umid_box = (TextBox)window.GetChildByName("ahum");
+            umid_box.Text = ahumid.ToString("F2");
+
+            TextBox gas_box = (TextBox)window.GetChildByName("agas");
+            gas_box.Text = agas.ToString("F2");
+
+           alarm_button_back= (Button)window.GetChildByName("back");
+           alarm_button_back.TapEvent += GoToMainFromAlarm;
+
+            Glide.MainWindow = window;
+            return;
+        
+        }
+      
         private void DrawMainWindow()
         {
             window = GlideLoader.LoadWindow(Resources.GetString(Resources.StringResources.MainWindow));//carico window da mostrare
@@ -243,6 +214,26 @@ namespace SmartHouse
             //read sensors
             TempHumidSI70.Measurement temp = tempHumidSI70.TakeMeasurement();
             double gas = gasSense.ReadProportion();
+            if (!noAlarm)
+            {
+                //check data on anomalia
+                if (gas > 1 || temp.Temperature > 70 || temp.RelativeHumidity > 100)
+                {
+                    //ALARM
+                    //mandare subito errore
+                    sendData();
+                    timerMain.Tick -= DrawMainWindow;
+                    timerMain.Stop();
+                    Thread.Sleep(navigation_delay);
+                    DrawAlarmWindow(temp.Temperature, temp.RelativeHumidity, gas);
+                    noAlarm = true;
+                    ResetNoAlarm.Tick += ActivateAlarm;
+                    ResetNoAlarm.Start();
+                    return;
+
+                }
+            }
+
             //fill stuff
             TextBox temp_box = (TextBox)window.GetChildByName("tempvalue");
             temp_box.Text = temp.Temperature.ToString("F2");
@@ -323,7 +314,7 @@ namespace SmartHouse
             TextBox gas_data = (TextBox)window.GetChildByName("gasdata");
 
             //ch0ose what to show
-            if (dataready)
+            if (dataready && !datarequested)
             {
                 loading.Visible = false;
                 temp_text.Visible = true;
@@ -432,12 +423,15 @@ namespace SmartHouse
             server_available = true;
             DrawMainWindow();
             timerSend.Tick += sendData;
-            timerSend.Start();//TODO: Capire perche' parte dopo tot tempo!!!!
+            timerSend.Start();//TODO: Capire perche' parte dopo tot tempo!!!!solution:problema stava in gestione della coda di thread
             return;
         }
 
+        private void sendData(GT.Timer timer) {
+            sendData();
+        }
 
-        private void sendData(GT.Timer tim)
+        private void sendData()
         {
             if (server_available && connected)
             {
@@ -447,7 +441,7 @@ namespace SmartHouse
                     // Create the form values
                   // var formValues = "password=" + "armando"/* + "&time=" + DateTime.Now.ToString() */+ "&temp=" + th.Temperature.ToString() + "&humid=" + th.RelativeHumidity.ToString() + "&gas=" + gasSense.ReadProportion().ToString();
                     var reqStart = "<RequestData xmlns=\"http://www.cosacosacosa.com/cosa\"><details>";
-                   var formValues = "armando|" +DateTime.Now.ToString()+"|"+ th.Temperature.ToString("F2") + "|" + th.RelativeHumidity.ToString("F2") + "|" + gasSense.ReadProportion().ToString("F2");
+                   var formValues = pwd+/*"|" +DateTime.Now.ToString()+*/"|"+ th.Temperature.ToString("F2") + "|" + th.RelativeHumidity.ToString("F2") + "|" + gasSense.ReadProportion().ToString("F2");
                    var reqEnd="</details></RequestData>";
                   
 
@@ -488,7 +482,7 @@ namespace SmartHouse
             //Debug.Print("Risposta ricevuta!");           
             if (response.StatusCode != "200")
             {
-                Debug.Print("Errore nella comunicazione con il server.Status code: "+response.StatusCode);
+                Debug.Print("Errore nella comunicazione con il server durante caricamento data sul server.Status code: "+response.StatusCode);
                 server_available = false;
                 timerRetryServer.Tick += RetryServer;
                 timerRetryServer.Start();
@@ -504,40 +498,49 @@ namespace SmartHouse
             return;
         }
 
-       private void SendReqDay(object sender){
-            datarequested=true;
-            if (connected && server_available) {
-                try {
+        private void SendReq(String param) {
+            if (connected && server_available)
+            {
+                try
+                {
                     var reqStart = "<RequestData xmlns=\"http://www.cosacosacosa.com/cosa\"><details>";
-                    var formValues = "armando|day";
+                    var formValues = pwd+"|"+param;
                     var reqEnd = "</details></RequestData>";
                     var content = Gadgeteer.Networking.POSTContent.CreateTextBasedContent(reqStart + formValues + reqEnd);
                     var request = Gadgeteer.Networking.HttpHelper.CreateHttpPostRequest(
-                        @"http://192.168.43.244:51417/Service1.svc/sendData" // the URL to post to
+                        @"http://192.168.43.244:51417/Service1.svc/getData" // the URL to post to
                         , content // the form values
                         , "application/xml" // the mime type for an HTTP form
                     );
+                    Debug.Print(reqStart + formValues + reqEnd);
                     request.ResponseReceived += new HttpRequest.ResponseHandler(GetData_ResponseReceived);
                     request.SendRequest();
                     while (!request.IsReceived) ;
                 }
-                catch (Exception) { }
+                catch (Exception) {
+                    //TODO:Anche se non funziona 
+                }
             }
-         
+            return;
+        }
+
+       private void SendReqDay(object sender){
+            datarequested=true;
             DrawMenu();
+            SendReq("today");//sta dopo drawmenu()cosi' questa funzione lavarera in background
             return;
         }
 
        private void SendReqWeek(object sender){
             datarequested=true;
-            //TODO
             DrawMenu();
+            SendReq("week");
             return;
         }
         private void SendReqMonth(object sender){
             datarequested=true;
-            //TODO
             DrawMenu();
+            SendReq("month");
             return;
         }
 
@@ -545,83 +548,47 @@ namespace SmartHouse
         {
             if (response.StatusCode != "200")
             {
-                Debug.Print("Errore nella comunicazione con il server.Status code: " + response.StatusCode);
+                Debug.Print("Errore nella comunicazione con il server durante invio richiesta per medie.Status code: " + response.StatusCode);
                 server_available = false;
                 dataready = false;
-                datarequested = false;
+               // datarequested = false; //Lascio true cosi' tengo loading sempre attivo(bloccato finche' non vado back)
                 timerRetryServer.Tick += RetryServer;
                 timerRetryServer.Start();
                 return;
 
             }
             else
-            {
-                //TODO:READ DATA FROM XML String
-           /*****TEST*****/
-        ///////////read xml
-       // MemoryStream rms = new MemoryStream(response.Text.ToCharArray());
- 
-        XmlReaderSettings ss = new XmlReaderSettings();
-        ss.IgnoreWhitespace = true;
-        ss.IgnoreComments = false;
-        //XmlException.XmlExceptionErrorCode.
-        XmlReader xmlr = XmlReader.Create(rms,ss);
-        while (!xmlr.EOF)
-        {
-            xmlr.Read();
-            switch (xmlr.NodeType)
-            {
-                case XmlNodeType.Element:
-                    Debug.Print("element: " + xmlr.Name);
-                    break;
-                case XmlNodeType.Text:
-                    Debug.Print("text: " + xmlr.Value);
-                    break;
-                case XmlNodeType.XmlDeclaration:
-                    Debug.Print("decl: " + xmlr.Name + ", " + xmlr.Value);
-                    break;
-                case XmlNodeType.Comment:
-                    Debug.Print("comment " + xmlr.Value);
-                    break;
-                case XmlNodeType.EndElement:
-                    Debug.Print("end element");
-                    break;
-                case XmlNodeType.Whitespace:
-                    Debug.Print("white space");
-                    break;
-                case XmlNodeType.None:
-                    Debug.Print("none");
-                    break;
-                default:
-                    Debug.Print(xmlr.NodeType.ToString());
-                    break;
-            }
-        }
-                /***** END TEST******/
-                
-                
-                datarequested = false;
-                dataready = true;
+            {   //se sono tornato indietro inutile entrarci quando arriva risposta;
+                if (datarequested)
+                {
+                    //TODO:READ DATA FROM XML String
+                    String r = response.Text;
+                    var data = r.Split('|');
+                    mtemp=data[1];
+                    mhum = data[2];
+                    mgas = data[3];
+
+                    datarequested = false;
+                    dataready = true;
+                    DrawMenu();
+                }
             }
             return;
         
         }
-        /*
-            public Stream GenerateStreamFromString(string s)
-{
-    MemoryStream stream = new MemoryStream();
-    StreamWriter writer = new StreamWriter(stream);
-    writer.Write(s);
-    writer.Flush();
-    stream.Position = 0;
-    return stream;
-}*/
+        
 
         private void  RetryServer(GT.Timer t) {
             server_available = true;
             timerRetryServer.Tick -= RetryServer;
             timerRetryServer.Stop();
             return;
+        }
+
+        private void ActivateAlarm(GT.Timer t) {
+            noAlarm = false;
+            ResetNoAlarm.Tick -= ActivateAlarm;
+            ResetNoAlarm.Stop();
         }
 
    

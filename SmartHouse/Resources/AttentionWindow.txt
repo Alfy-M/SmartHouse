@@ -1,0 +1,12 @@
+<Glide Version="1.0.7">
+  <Window Name="instance115" Width="320" Height="240" BackColor="FF0000">
+    <TextBlock Name="instance438" X="62" Y="8" Width="200" Height="35" Alpha="255" Text="Attention" TextAlign="Center" TextVerticalAlign="Middle" Font="8" FontColor="0" BackColor="000000" ShowBackColor="False"/>
+    <Button Name="back" X="236" Y="208" Width="80" Height="32" Alpha="255" Text="Back" Font="4" FontColor="000000" DisabledFontColor="808080" TintColor="000000" TintAmount="0"/>
+    <TextBlock Name="instance1861" X="20" Y="60" Width="100" Height="32" Alpha="255" Text="Temperature" TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
+    <TextBox Name="atemp" X="126" Y="60" Width="80" Height="32" Alpha="255" Text="" TextAlign="Left" Font="4" FontColor="000000"/>
+    <TextBlock Name="instance4085" X="20" Y="102" Width="100" Height="32" Alpha="255" Text="Humidity" TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
+    <TextBlock Name="instance4932" X="20" Y="142" Width="100" Height="32" Alpha="255" Text="Gas" TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
+    <TextBox Name="ahum" X="126" Y="102" Width="80" Height="32" Alpha="255" Text="" TextAlign="Left" Font="4" FontColor="000000"/>
+    <TextBox Name="agas" X="126" Y="142" Width="80" Height="32" Alpha="255" Text="" TextAlign="Left" Font="4" FontColor="000000"/>
+  </Window>
+</Glide>

@@ -118,4 +118,7 @@
   <ItemGroup>
     <None Include="Resources\ComWindow.txt" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\AttentionWindow.txt" />
+  </ItemGroup>
 </Project>

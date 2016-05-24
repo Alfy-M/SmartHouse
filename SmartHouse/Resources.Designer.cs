@@ -34,17 +34,18 @@ namespace SmartHouse
             return ((string)(Microsoft.SPOT.ResourceUtility.GetObject(ResourceManager, id)));
         }
         [System.SerializableAttribute()]
+        internal enum StringResources : short
+        {
+            AttentionWindow = -32275,
+            MainWindow = 14107,
+            StartWindow = 14420,
+            ComWindow = 32445,
+        }
+        [System.SerializableAttribute()]
         internal enum FontResources : short
         {
             small = 13070,
             NinaB = 18060,
-        }
-        [System.SerializableAttribute()]
-        internal enum StringResources : short
-        {
-            MainWindow = 14107,
-            StartWindow = 14420,
-            ComWindow = 32445,
         }
     }
 }
