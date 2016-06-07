@@ -32,9 +32,10 @@ namespace SmartHouse
          Window window;
          Boolean connection;//true=wifi,false=RJ45
 
+        int navigation_delay = 1500;
+
         String pwd = "armando";
-        private Object myLock = new Object();//solo per window,serve separato perche' lo chiamo da altra funzione che tiene gia' un lock->uno aspetera altro 
-        private Object myLockAtm = new Object();//per garantire atomicita' di tutti operazioni,perche' tutti fanno riferimento agli variabili globali(timer,boolean etc)
+        private Object myLock = new Object();
 
         //variables for send data
         GT.Timer timerSend = new GT.Timer(60*1000);//1 minute
@@ -62,7 +63,7 @@ namespace SmartHouse
        // variable for alarm
         Button alarm_button_back;
         Boolean noAlarm;//to disactivate alarm check after one read it
-        GT.Timer ResetNoAlarm = new GT.Timer(90 * 1000);//ogni 1.5 minute reshow alarm if error stil active;
+        GT.Timer ResetNoAlarm = new GT.Timer(90 * 1000);//ogni 1.5 reshow alarm if error stil active;
 
         //variable bad connectors
         Button reset;
@@ -82,26 +83,24 @@ namespace SmartHouse
             noAlarm = false;
             ShowConnectionWindow();
                 
+           
             // Use Debug.Print to show messages in Visual Studio's "Output" window during debugging.*/
             Debug.Print("Program Started");
             return;
         }
 
         private void ShowConnectionWindow(){
-            lock (myLockAtm)
-            {
-                window = GlideLoader.LoadWindow(Resources.GetString(Resources.StringResources.StartWindow));//carico window da mostrare
-                GlideTouch.Initialize();
-                b_rj = (Button)window.GetChildByName("rjbutton");
-                b_wifi = (Button)window.GetChildByName("wifibutton");
+             window = GlideLoader.LoadWindow(Resources.GetString(Resources.StringResources.StartWindow));//carico window da mostrare
+            GlideTouch.Initialize();
+             b_rj = (Button)window.GetChildByName("rjbutton");
+             b_wifi = (Button)window.GetChildByName("wifibutton");
 
-                b_rj.TapEvent += ChooseRJ;
-                b_wifi.TapEvent += ChooseWiFi;
+            b_rj.TapEvent += ChooseRJ;
+            b_wifi.TapEvent += ChooseWiFi;
 
-                Glide.MainWindow = window;
+            Glide.MainWindow = window;
 
-                connected = false;
-            }
+            connected = false;
             return;
         
         }
@@ -111,20 +110,19 @@ namespace SmartHouse
         {
             try
             {
-                lock (myLockAtm)
+                lock (myLock)
                 {
                     connection = false;
                     gasSense.HeatingElementEnabled = true;
                     SetupEthernet();
                     ethernetJ11D.NetworkUp += OnNetworkUp;
                     ethernetJ11D.NetworkDown += OnNetworkDown;
+                    DrawMainWindow();//to avoid delay due to timer
                     ListNetworkInterfaces();
                     timerMain.Tick += DrawMainWindow;
                     timerMain.Start();
-                    DrawMainWindow();//to avoid delay due to timer
                     return;
                 }
-                
             }
             catch (System.ApplicationException)
             {  
@@ -144,17 +142,16 @@ namespace SmartHouse
         {   //connection wifi
             try
             {
-                lock (myLockAtm)
+                lock (myLock)
                 {
                     connection = true;
                     gasSense.HeatingElementEnabled = true;
+                    DrawMainWindow();//to avoid delay due to timer
                     timerMain.Tick += DrawMainWindow;
                     timerMain.Start();
                     wifiConnect();
-                    DrawMainWindow();//to avoid delay due to timer
                     return;
                 }
-               
             }
             catch (System.ApplicationException a)
             {
@@ -171,17 +168,16 @@ namespace SmartHouse
         }
 
         private void GoToMainFromAlarm(object sender) {
-            lock (myLockAtm)
-            {
+         
                 timerMain.Tick += DrawMainWindow;
                 timerMain.Start();
                 DrawMainWindow();//to avoid delay due to timer
                 return;
-            }
+          
         }
 
         private void GoToMain(object sender){
-            lock (myLockAtm)
+            lock (myLock)
             {
                 ask_mday.TapEvent -= SendReqDay;
                 ask_mweek.TapEvent -= SendReqWeek;
@@ -194,11 +190,10 @@ namespace SmartHouse
                 DrawMainWindow();//to avoid delay due to timer
                 return;
             }
-            
         }
 
         private void GoToMenu(object sender){
-            lock (myLockAtm)//per finire draw main e solo dopo andare a menu
+            lock (myLock)//per finire draw main e solo dopo andare a menu
             {
                 timerMain.Tick -= DrawMainWindow;
                 timerMain.Stop();
@@ -209,7 +204,7 @@ namespace SmartHouse
         }
 
         private void resetAll(object sender) {
-            lock (myLockAtm)//altrimenti puo provare lanciare thread mentre tolgo handler
+            lock (myLock)//altrimenti puo provare lanciare thread mentre tolgo handler
             {
                 timerSend.Tick -= sendData;
                 timerMain.Tick -= DrawMainWindow;
@@ -221,15 +216,15 @@ namespace SmartHouse
                 ResetNoAlarm.Stop();
                 Mainboard.PostInit();
                 ShowConnectionWindow();
-                return;     
-            }    
+            }
+            
         }
 
         
         private void GoToConnections(object sender) {
             try
             {
-                lock (myLockAtm)//per evitare che schiaccio back mentre scrivo window
+                lock (myLock)//per evitare che schiaccio back mentre scrivo window
                 {
                     if (connection)
                     {//close wifi
@@ -257,8 +252,7 @@ namespace SmartHouse
                     timerSend.Stop();
                     //Thread.Sleep(navigation_delay);
                     ShowConnectionWindow();
-                } 
-                
+                }
             }
             catch (System.ApplicationException a)
             {
@@ -321,35 +315,35 @@ namespace SmartHouse
         {
             try
             {
-                //read sensors
-                TempHumidSI70.Measurement temp = tempHumidSI70.TakeMeasurement();
-                double gas = gasSense.ReadProportion();
-                if (!noAlarm)//prima controllo anomalie e solo poi aquisico lock per disegniare,altrimenti uno aspettera' altro!
-                {
-                    //check data on anomalia
-                    if (gas > 1 || temp.Temperature > 60 || temp.RelativeHumidity > 90)
-                    {
-                        //ALARM
-                        //n.b. Se durante attention message lui si connete/disconnette alla rete sara revisualizzato Main!!!!
-                        //mandare subito errore
-                        sendData();
-                        timerMain.Tick -= DrawMainWindow;
-                        timerMain.Stop();
-                        //see if need delay/threadsleep
-
-                        noAlarm = true;
-                        ResetNoAlarm.Tick += ActivateAlarm;
-                        ResetNoAlarm.Start();
-                        DrawAlarmWindow(temp.Temperature, temp.RelativeHumidity, gas);
-                        return;
-
-                    }
-                }
                 lock (myLock)
                 {
                     window = GlideLoader.LoadWindow(Resources.GetString(Resources.StringResources.MainWindow));//carico window da mostrare
                     GlideTouch.Initialize();
-                   
+                    //read sensors
+
+                    TempHumidSI70.Measurement temp = tempHumidSI70.TakeMeasurement();
+                    double gas = gasSense.ReadProportion();
+                    if (!noAlarm)
+                    {
+                        //check data on anomalia
+                        if (gas > 1 || temp.Temperature > 70 || temp.RelativeHumidity > 100)
+                        {
+                            //ALARM
+                            //n.b. Se durante attention message lui si connete/disconnette alla rete sara revisualizzato Main!!!!
+                            //mandare subito errore
+                            sendData();
+                            timerMain.Tick -= DrawMainWindow;
+                            timerMain.Stop();
+                            Thread.Sleep(navigation_delay);
+                            DrawAlarmWindow(temp.Temperature, temp.RelativeHumidity, gas);
+                            noAlarm = true;
+                            ResetNoAlarm.Tick += ActivateAlarm;
+                            ResetNoAlarm.Start();
+                            return;
+
+                        }
+                    }
+
                     //fill stuff
                     TextBox temp_box = (TextBox)window.GetChildByName("tempvalue");
                     temp_box.Text = temp.Temperature.ToString("F2");
@@ -540,59 +534,27 @@ namespace SmartHouse
         /*** per ethernet****/
         void ListNetworkInterfaces()
         {
-            try
-            {
-                var settings = ethernetJ11D.NetworkSettings;
-                Debug.Print("------------------------------------------------");
-                //Debug.Print("MAC: " + ByteExtensions.ToHexString(settings.PhysicalAddress, "-"));
-                Debug.Print("IP Address:   " + settings.IPAddress);
-                Debug.Print("DHCP Enabled: " + settings.IsDhcpEnabled);
-                Debug.Print("Subnet Mask:  " + settings.SubnetMask);
-                Debug.Print("Gateway:      " + settings.GatewayAddress);
-                Debug.Print("------------------------------------------------");
-            }
-            catch (System.ApplicationException a)
-            {
-                DrawConnetorsAlarmWindow();
-                return;
+            var settings = ethernetJ11D.NetworkSettings;
 
-            }
-            catch (System.Exception)
-            {
-                DrawConnetorsAlarmWindow();
-                return;
-
-            }
-            
+            Debug.Print("------------------------------------------------");
+            //Debug.Print("MAC: " + ByteExtensions.ToHexString(settings.PhysicalAddress, "-"));
+            Debug.Print("IP Address:   " + settings.IPAddress);
+            Debug.Print("DHCP Enabled: " + settings.IsDhcpEnabled);
+            Debug.Print("Subnet Mask:  " + settings.SubnetMask);
+            Debug.Print("Gateway:      " + settings.GatewayAddress);
+            Debug.Print("------------------------------------------------");
         }
 
 
 
         void SetupEthernet()
         {
-            try{
-                lock (myLockAtm)
-                {
-                    ethernetJ11D.NetworkInterface.Open();
-                    ethernetJ11D.UseThisNetworkInterface();
-                    ethernetJ11D.UseStaticIP(
-                        "192.168.43.10",
-                       "255.255.255.0",
-                        "192.168.43.240");
-                }
-            }
-            catch (System.ApplicationException a)
-            {
-                DrawConnetorsAlarmWindow();
-                return;
-
-            }
-            catch (System.Exception)
-            {
-                DrawConnetorsAlarmWindow();
-                return;
-
-            }
+            ethernetJ11D.NetworkInterface.Open();
+            ethernetJ11D.UseThisNetworkInterface();
+            ethernetJ11D.UseStaticIP(
+                "192.168.43.10",
+               "255.255.255.0",
+                "192.168.43.240");
         }
 
 
@@ -605,17 +567,14 @@ namespace SmartHouse
 
         void OnNetworkUp(GTM.Module.NetworkModule sender, GTM.Module.NetworkModule.NetworkState state)
         {
-            lock (myLockAtm)
-            {
-                Debug.Print("Network up.");
-                connected = true;
-                server_available = true;
-                DrawMainWindow();
-                timerSend.Tick += sendData;
-                timerSend.Start();
-                //sendData();
-                return;
-            }
+            Debug.Print("Network up.");
+            connected = true;
+            server_available = true;
+            DrawMainWindow();
+            timerSend.Tick += sendData;
+            timerSend.Start();
+            //sendData();
+            return;
         }
     /**end per ethernet**/
 
@@ -623,37 +582,34 @@ namespace SmartHouse
         {
             try
             {
-                lock (myLockAtm)
+                wifiRS21.NetworkUp += wifiRS21_NetworkUp;
+                wifiRS21.NetworkDown += wifiRS21_NetworkDown;
+                wifiRS21.NetworkInterface.Open();
+                wifiRS21.NetworkInterface.EnableDhcp();
+                wifiRS21.NetworkInterface.EnableDynamicDns();
+                WiFiRS9110.NetworkParameters[] scanResult = wifiRS21.NetworkInterface.Scan();
+                for (int i = 0; i < scanResult.Length; i++)
                 {
-                    wifiRS21.NetworkUp += wifiRS21_NetworkUp;
-                    wifiRS21.NetworkDown += wifiRS21_NetworkDown;
-                    wifiRS21.NetworkInterface.Open();
-                    wifiRS21.NetworkInterface.EnableDhcp();
-                    wifiRS21.NetworkInterface.EnableDynamicDns();
-                    WiFiRS9110.NetworkParameters[] scanResult = wifiRS21.NetworkInterface.Scan();
-                    for (int i = 0; i < scanResult.Length; i++)
+                    if (scanResult[i].Ssid == "PucciH")
                     {
-                        if (scanResult[i].Ssid == "PucciH")
+                        try
                         {
-                            try
-                            {
-                                wifiRS21.NetworkInterface.Join(scanResult[i].Ssid, "marevivo");
-                            }
-                            catch (WiFiRS9110.JoinException e)
-                            {
-                                Debug.Print("Error Message: " + e.Message);
-                            }
-                            break;
+                            wifiRS21.NetworkInterface.Join(scanResult[i].Ssid, "marevivo");
                         }
+                        catch (WiFiRS9110.JoinException e)
+                        {
+                            Debug.Print("Error Message: " + e.Message);
+                        }
+                        break;
                     }
-                    /*
-                    while (wifiRS21.NetworkInterface.IPAddress == "0.0.0.0")
-                    {
-                        Thread.Sleep(500);
-                    }*/
-                    // Debug.Print("Ip-Address = " + wifiRS21.NetworkInterface.IPAddress);
                 }
-                    return;
+                /*
+                while (wifiRS21.NetworkInterface.IPAddress == "0.0.0.0")
+                {
+                    Thread.Sleep(500);
+                }*/
+                // Debug.Print("Ip-Address = " + wifiRS21.NetworkInterface.IPAddress);
+                return;
             }
             catch (System.ApplicationException a)
             {
@@ -678,19 +634,14 @@ namespace SmartHouse
         }
         void wifiRS21_NetworkUp(GTM.Module.NetworkModule sender, GTM.Module.NetworkModule.NetworkState state)
         {
-            lock (myLockAtm)
-            {
-
-                //Quando la connessione è "up" inizamo a trasmettere i dati al server
-                Debug.Print("Network is up!");
-                connected = true;
-                server_available = true;
-                timerSend.Tick += sendData;
-                timerSend.Start();//TODO: Capire perche' parte dopo tot tempo!!!!solution:problema stava in gestione della coda di thread
-                DrawMainWindow();
-                return;
-            }
-            
+            //Quando la connessione è "up" inizamo a trasmettere i dati al server
+            Debug.Print("Network is up!");
+            connected = true;
+            server_available = true;
+            DrawMainWindow();
+            timerSend.Tick += sendData;
+            timerSend.Start();//TODO: Capire perche' parte dopo tot tempo!!!!solution:problema stava in gestione della coda di thread
+            return;
         }
 
         private void sendData(GT.Timer timer) {
@@ -702,31 +653,32 @@ namespace SmartHouse
             if (server_available && connected)
             {
                 try
-                {//qui non faccio lock ,altrimenti blocco tutto finche' non ricevo risposta e non va bene!Devo essere securo che operazioni sono atomici e veloci!
-                        TempHumidSI70.Measurement th = tempHumidSI70.TakeMeasurement();
-                        // Create the form values
-                        var reqStart = "<RequestData xmlns=\"http://www.cosacosacosa.com/cosa\"><details>";
-                        var formValues = pwd +/*"|" +DateTime.Now.ToString()+*/"|" + th.Temperature.ToString("F2") + "|" + th.RelativeHumidity.ToString("F2") + "|" + gasSense.ReadProportion().ToString("F2");
-                        var reqEnd = "</details></RequestData>";
+                {
+                    TempHumidSI70.Measurement th = tempHumidSI70.TakeMeasurement();
+                    // Create the form values
+                  // var formValues = "password=" + "armando"/* + "&time=" + DateTime.Now.ToString() */+ "&temp=" + th.Temperature.ToString() + "&humid=" + th.RelativeHumidity.ToString() + "&gas=" + gasSense.ReadProportion().ToString();
+                    var reqStart = "<RequestData xmlns=\"http://www.cosacosacosa.com/cosa\"><details>";
+                   var formValues = pwd+/*"|" +DateTime.Now.ToString()+*/"|"+ th.Temperature.ToString("F2") + "|" + th.RelativeHumidity.ToString("F2") + "|" + gasSense.ReadProportion().ToString("F2");
+                   var reqEnd="</details></RequestData>";
+                  
 
-
-                        Debug.Print(reqStart + formValues + reqEnd);
-                        // Create POST content
-
-                        var content = Gadgeteer.Networking.POSTContent.CreateTextBasedContent(reqStart + formValues + reqEnd);
-                        // Create the request
-                        var request = Gadgeteer.Networking.HttpHelper.CreateHttpPostRequest(
-                            @"http://192.168.43.244:51417/Service1.svc/sendData" // the URL to post to
-                            , content // the form values
-                            , "application/xml" // the mime type for an HTTP form
-                        );
-
-                        // Post the form
-                        request.ResponseReceived += new HttpRequest.ResponseHandler(SendData_ResponseReceived);
-                        request.SendRequest();
-                        while (!request.IsReceived) ;
-                        // Debug.Print("DEVO FINIRE ThREAD"); 
+                      Debug.Print(reqStart+formValues+reqEnd);
+                    // Create POST content
                     
+                      var content = Gadgeteer.Networking.POSTContent.CreateTextBasedContent(reqStart + formValues + reqEnd);
+                    // Create the request
+                    var request = Gadgeteer.Networking.HttpHelper.CreateHttpPostRequest(
+                        @"http://192.168.43.244:51417/Service1.svc/sendData" // the URL to post to
+                       // @"http://169.254.121.227:51417/Service1.svc/sendData"
+                        , content // the form values
+                        , "application/xml" // the mime type for an HTTP form
+                    );
+
+                    // Post the form
+                    request.ResponseReceived += new HttpRequest.ResponseHandler(SendData_ResponseReceived);
+                    request.SendRequest();
+                    while (!request.IsReceived) ;
+                   // Debug.Print("DEVO FINIRE ThREAD"); 
 
                 }
                 catch (System.ApplicationException a)
@@ -758,23 +710,21 @@ namespace SmartHouse
 
         void SendData_ResponseReceived(HttpRequest sender, HttpResponse response)
         {
-            lock (myLockAtm)
+            //Debug.Print("Risposta ricevuta!");           
+            if (response.StatusCode != "200")
             {
-                //Debug.Print("Risposta ricevuta!");           
-                if (response.StatusCode != "200")
-                {
-                    Debug.Print("Errore nella comunicazione con il server durante caricamento data sul server.Status code: " + response.StatusCode);
-                    server_available = false;
-                    timerRetryServer.Tick += RetryServer;
-                    timerRetryServer.Start();
-                    return;
-                }
-                else
-                {
-                    Debug.Print("Invio avvenuto con successo (Code: " + response.StatusCode + ")");
-                    Debug.Print("Valore: " + response.Text + ")");
-
-                }
+                Debug.Print("Errore nella comunicazione con il server durante caricamento data sul server.Status code: "+response.StatusCode);
+                server_available = false;
+                timerRetryServer.Tick += RetryServer;
+                timerRetryServer.Start();
+                return;
+             
+            }
+            else
+            {
+                Debug.Print("Invio avvenuto con successo (Code: "+response.StatusCode+")");
+                Debug.Print("Valore: " + response.Text+ ")");
+             
             }
             return;
         }
@@ -820,7 +770,7 @@ namespace SmartHouse
        private void SendReqDay(object sender){
             datarequested=true;
             DrawMenu();
-            SendReq("today");
+            SendReq("today");//sta dopo drawmenu()cosi' questa funzione lavarera in background
             return;
         }
 
@@ -839,31 +789,30 @@ namespace SmartHouse
 
         void GetData_ResponseReceived(HttpRequest sender, HttpResponse response)
         {
-            lock (myLockAtm)
+            if (response.StatusCode != "200")
             {
-                if (response.StatusCode != "200")
+                Debug.Print("Errore nella comunicazione con il server durante invio richiesta per medie.Status code: " + response.StatusCode);
+                server_available = false;
+                dataready = false;
+               // datarequested = false; //Lascio true cosi' tengo loading sempre attivo(bloccato finche' non vado back)
+                timerRetryServer.Tick += RetryServer;
+                timerRetryServer.Start();
+                return;
+
+            }
+            else
+            {   //se sono tornato indietro inutile entrarci quando arriva risposta;
+                if (datarequested)
                 {
-                    Debug.Print("Errore nella comunicazione con il server durante invio richiesta per medie.Status code: " + response.StatusCode);
-                    server_available = false;
-                    dataready = false;
-                    // datarequested = false; //Lascio true cosi' tengo loading sempre attivo(bloccato finche' non vado back)
-                    timerRetryServer.Tick += RetryServer;
-                    timerRetryServer.Start();
-                    return;
-                }
-                else
-                {   //se sono tornato indietro inutile entrarci quando arriva risposta;
-                    if (datarequested)
-                    {
-                        String r = response.Text;
-                        var data = r.Split('|');
-                        mtemp = data[1];
-                        mhum = data[2];
-                        mgas = data[3];
-                        datarequested = false;
-                        dataready = true;
-                        DrawMenu();
-                    }
+                    String r = response.Text;
+                    var data = r.Split('|');
+                    mtemp=data[1];
+                    mhum = data[2];
+                    mgas = data[3];
+
+                    datarequested = false;
+                    dataready = true;
+                    DrawMenu();
                 }
             }
             return;
@@ -872,23 +821,16 @@ namespace SmartHouse
         
 
         private void  RetryServer(GT.Timer t) {
-            lock (myLockAtm)
-            {
-                server_available = true;
-                timerRetryServer.Tick -= RetryServer;
-                timerRetryServer.Stop();
-                return;
-            }
+            server_available = true;
+            timerRetryServer.Tick -= RetryServer;
+            timerRetryServer.Stop();
+            return;
         }
 
         private void ActivateAlarm(GT.Timer t) {
-            lock (myLockAtm)
-            {
-                noAlarm = false;
-                ResetNoAlarm.Tick -= ActivateAlarm;
-                ResetNoAlarm.Stop();
-                return;
-            }
+            noAlarm = false;
+            ResetNoAlarm.Tick -= ActivateAlarm;
+            ResetNoAlarm.Stop();
         }
 
    

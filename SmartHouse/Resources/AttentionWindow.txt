@@ -8,7 +8,5 @@
     <TextBlock Name="instance4932" X="20" Y="142" Width="100" Height="32" Alpha="255" Text="Gas" TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
     <TextBox Name="ahum" X="126" Y="102" Width="80" Height="32" Alpha="255" Text="" TextAlign="Left" Font="4" FontColor="000000"/>
     <TextBox Name="agas" X="126" Y="142" Width="80" Height="32" Alpha="255" Text="" TextAlign="Left" Font="4" FontColor="000000"/>
-    <TextBlock Name="instance507" X="210" Y="102" Width="20" Height="32" Alpha="255" Text="%" TextAlign="center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
-    <TextBlock Name="instance4222" X="210" Y="60" Width="20" Height="32" Alpha="255" Text="C" TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
   </Window>
 </Glide>

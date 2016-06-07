@@ -5,9 +5,9 @@
     <Button Name="mmonth" X="240" Y="63" Width="80" Height="32" Alpha="255" Text="month" Font="4" FontColor="000000" DisabledFontColor="808080" TintColor="000000" TintAmount="0"/>
     <TextBlock Name="loading" X="110" Y="104" Width="100" Height="32" Alpha="255" Text="Loading...." TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
     <TextBlock Name="title" X="57" Y="12" Width="200" Height="32" Alpha="255" Text="Get medium values for:" TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
-    <TextBlock Name="temptext" X="10" Y="142" Width="100" Height="32" Alpha="255" Text="Temperature (C)" TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
+    <TextBlock Name="temptext" X="10" Y="142" Width="100" Height="32" Alpha="255" Text="Temperature" TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
     <TextBox Name="tempdata" X="126" Y="142" Width="80" Height="32" Alpha="255" Text="" TextAlign="Left" Font="4" FontColor="000000"/>
-    <TextBlock Name="humtext" X="10" Y="174" Width="100" Height="32" Alpha="255" Text="Humidity (%)" TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
+    <TextBlock Name="humtext" X="10" Y="174" Width="100" Height="32" Alpha="255" Text="Humidity" TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
     <TextBox Name="humdata" X="126" Y="175" Width="80" Height="32" Alpha="255" Text="" TextAlign="Left" Font="4" FontColor="000000"/>
     <TextBlock Name="gastext" X="10" Y="208" Width="100" Height="32" Alpha="255" Text="Gas" TextAlign="Center" TextVerticalAlign="Middle" Font="4" FontColor="0" BackColor="000000" ShowBackColor="False"/>
     <TextBox Name="gasdata" X="126" Y="208" Width="80" Height="32" Alpha="255" Text="" TextAlign="Left" Font="4" FontColor="000000"/>
